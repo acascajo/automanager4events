@@ -1,0 +1,409 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "62aed103-b37e-410c-bba1-8302e54801fb",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8000/survio/scrape-individual",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "0251db50-63bd-4940-9621-73a872f5741e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\nif (!data || data.status !== \"ok\") {\n  throw new Error(\"Respuesta inválida del API\");\n}\n\nconst rows = data.normalized_records;\nif (!Array.isArray(rows)) {\n  throw new Error(\"normalized_records no es un array\");\n}\n\nreturn rows.map(r => ({ json: r }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "c8548a2a-567b-4824-be6f-acf1b4016ed1",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.preguntas }}",
+                    "rightValue": "Si puedo y puedo poner coche",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5d3041e8-24b1-43e9-bd85-bc42490ca749"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Camareros con coche"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ba98d667-b898-49e4-96e9-6485e907ccf8",
+                    "leftValue": "={{ $json.preguntas }}",
+                    "rightValue": "Si puedo pero no tengo coche",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Camareros sin coche"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a7eb34ab-22c4-4da1-8455-d8dc1685bfba",
+                    "leftValue": "={{ $json.preguntas }}",
+                    "rightValue": "No puedo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Camareros no disponibles"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        -16
+      ],
+      "id": "18a0c6fa-bcf3-414e-a435-5469d4fe3940",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4",
+          "mode": "list",
+          "cachedResultName": "Camareros",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Teléfono",
+              "lookupValue": "={{ $json.telefono }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        -304
+      ],
+      "id": "fbb5af95-daa3-4f8a-a230-b2eceb7e2192",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Puede ser una buena opción intervención humana cuando ya tienes todos los grupos creados para que veas que personas no hemos podido encontrar en la base de datos, así si hay algún camarero conocido que haya puesto mal su número de tlf le podemos volver a introducir"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -480
+      ],
+      "id": "0fbe9f9f-b2d0-4768-a25b-3f577dab5789",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4",
+          "mode": "list",
+          "cachedResultName": "Camareros",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Teléfono",
+              "lookupValue": "={{ $json.telefono }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        0
+      ],
+      "id": "77ebb108-5da2-4214-b8a3-1e6fd00bbe1f",
+      "name": "Get row(s) in sheet1",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4",
+          "mode": "list",
+          "cachedResultName": "Camareros",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Teléfono",
+              "lookupValue": "={{ $json.telefono }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        336
+      ],
+      "id": "ac2b9225-d412-429f-b00f-4dc0ab7981fe",
+      "name": "Get row(s) in sheet2",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Aunque contesten que no tenemos que actualizar que siguen queriendo currar (actualizamos la columna de updated at)"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        816,
+        496
+      ],
+      "id": "afd9a440-8aa2-4ebb-8a2d-d96ffdfe3234",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Survio no deja exportar en xls a no ser que sea de pago, simular un xls con las salidas de una encuesta o dejarlo así con web scrapping??"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -240
+      ],
+      "id": "41b0910b-e585-4adb-96ee-9df4320d8421",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Normalizamos con un código en js\n",
+        "height": 80,
+        "width": 160
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        384,
+        160
+      ],
+      "id": "63989464-fbcd-4a15-8f11-f0e41b345555",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Añadir el filtro OR nombre",
+        "height": 80,
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -400
+      ],
+      "id": "86451720-f443-4e90-9a55-a2e149eb4dcb",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6e46c6e1-4536-4f94-9d65-73784b1e5cbc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
+  },
+  "id": "73PHpjXpibb68q6LLFS2c",
+  "tags": []
+}
