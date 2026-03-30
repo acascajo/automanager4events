@@ -1,0 +1,366 @@
+{
+  "name": "Laurel Catering v3",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "366a61ca-6e00-408a-b66c-19fe67b7a118",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "content": "Puede ser una buena opción intervención humana cuando ya tienes todos los grupos creados para que veas que personas no hemos podido encontrar en la base de datos, así si hay algún camarero conocido que haya puesto mal su número de tlf le podemos volver a introducir",
+        "height": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -496
+      ],
+      "id": "ab04ceee-5621-4917-94c0-3c5e13c048a1",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Aunque contesten que no tenemos que actualizar que siguen queriendo currar (actualizamos la columna de updated at)"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        576,
+        560
+      ],
+      "id": "66ea8c50-d39a-4e25-b951-ef42bca9156f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Añadir el filtro OR nombre",
+        "height": 80,
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -416
+      ],
+      "id": "223c75b6-dee6-47f3-a969-90f33ca60d37",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1AfglQgYS2fHIFerbdmoCKsI0iUPRUeEehAKbxPq-3xQ",
+          "mode": "list",
+          "cachedResultName": "Encuesta_prueba",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AfglQgYS2fHIFerbdmoCKsI0iUPRUeEehAKbxPq-3xQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "20/06/2026",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AfglQgYS2fHIFerbdmoCKsI0iUPRUeEehAKbxPq-3xQ/edit#gid=0"
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        288,
+        -256
+      ],
+      "id": "b46a9bd6-7c98-43be-9629-cd5655200c97",
+      "name": "Encuesta",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4",
+          "mode": "list",
+          "cachedResultName": "Camareros",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JTzEuB94XDkEdJvHwcTm8jP7Sg4r-ciJo4sI1rVX_z4/edit#gid=0"
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        288,
+        0
+      ],
+      "id": "07a6b5e2-a81c-4a5c-aa5b-5498b03d3a87",
+      "name": "BD_Camareros",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1IKQkIsSfQZznXeLMLP8OZjQXe5Rf2AzGs8m4uODDcQk",
+          "mode": "list",
+          "cachedResultName": "Eventos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IKQkIsSfQZznXeLMLP8OZjQXe5Rf2AzGs8m4uODDcQk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Events",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IKQkIsSfQZznXeLMLP8OZjQXe5Rf2AzGs8m4uODDcQk/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        288,
+        352
+      ],
+      "id": "7eaa5a8e-09f2-4358-8c95-02beee227bdf",
+      "name": "Eventos",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const disponibilidad = $items(\"Encuesta\").map(item => item.json);\nconst camareros = $items(\"BD_Camareros\").map(item => item.json);\nconst eventos = $items(\"Eventos\").map(item => item.json);\n\nfunction clean(value) {\n  return String(value ?? \"\").trim();\n}\n\nfunction upper(value) {\n  return clean(value).toUpperCase();\n}\n\nfunction toNumber(value) {\n  const n = Number(String(value ?? \"\").replace(\",\", \".\"));\n  return Number.isNaN(n) ? 0 : n;\n}\n\nfunction normalizeDate(value) {\n  const v = clean(value);\n\n  if (/^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(v)) return v;\n\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(v)) {\n    const [y, m, d] = v.split(\"-\");\n    return `${d}/${m}/${y}`;\n  }\n\n  return v;\n}\n\nfunction normalizeText(value) {\n  return clean(value)\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .toUpperCase();\n}\n\n// 1. Índice de BD de camareros por teléfono\nconst camarerosPorTelefono = {};\n\nfor (const c of camareros) {\n  const telefono = clean(c.telefono);\n  if (!telefono) continue;\n\n  camarerosPorTelefono[telefono] = {\n    telefono,\n    nombre: clean(c.nombre),\n    fecha_alta: clean(c.fecha_alta),\n    horas_trabajadas: toNumber(c.horas_trabajadas),\n    nota: toNumber(c.nota),\n    fecha_ultimo_evento: clean(c.fecha_ultimo_evento),\n    activo: upper(c.activo),\n    verificado: upper(c.verificado),\n  };\n}\n\n// 2. Filtrar eventos NEW reales\nconst eventosNew = eventos\n  .filter(e => clean(e.event_id) !== \"\")\n  .filter(e => upper(e.estado) === \"NEW\");\n\n// 3. Agrupar eventos por fecha\nconst eventosPorFecha = {};\n\nfor (const e of eventosNew) {\n  const fecha = normalizeDate(e.fecha);\n  if (!fecha) continue;\n\n  if (!eventosPorFecha[fecha]) {\n    eventosPorFecha[fecha] = [];\n  }\n\n  eventosPorFecha[fecha].push({\n    event_id: clean(e.event_id),\n    fecha,\n    hora_inicio: clean(e.hora_inicio),\n    hora_fin: clean(e.hora_fin),\n    tipo: clean(e.tipo),\n    nombre_evento: clean(e.nombre_evento),\n    ubicacion: clean(e.ubicacion),\n    asistentes: toNumber(e.asistentes),\n    camareros_necesarios: toNumber(e.camareros_necesarios),\n    estado: clean(e.estado),\n    prioridad: toNumber(e.prioridad),\n    observaciones: clean(e.observaciones),\n  });\n}\n\n// 4. Procesar disponibilidad por fecha\nconst salida = [];\n\nfor (const [fecha, listaEventos] of Object.entries(eventosPorFecha)) {\n  const respuestasDia = disponibilidad.filter(\n    d =>\n      normalizeDate(d.fecha_evento) === fecha &&\n      upper(d.disponible) === \"SI\"\n  );\n\n  const camarerosValidos = [];\n  const incidencias = [];\n  const telefonosYaIncluidos = new Set();\n\n  for (const d of respuestasDia) {\n    const telefono = clean(d.telefono);\n    const nombreEncuesta = clean(d.nombre);\n    const tieneCoche = upper(d.tiene_coche) === \"SI\";\n    const observaciones = clean(d.observaciones);\n\n    if (!telefono) {\n      incidencias.push({\n        telefono: \"\",\n        nombre_encuesta: nombreEncuesta,\n        fecha,\n        motivo: \"TELEFONO_VACIO\",\n      });\n      continue;\n    }\n\n    const ficha = camarerosPorTelefono[telefono];\n\n    if (!ficha) {\n      incidencias.push({\n        telefono,\n        nombre_encuesta: nombreEncuesta,\n        fecha,\n        motivo: \"NO_ENCONTRADO_EN_BD\",\n      });\n      continue;\n    }\n\n    if (ficha.activo !== \"SI\") {\n      incidencias.push({\n        telefono,\n        nombre_encuesta: nombreEncuesta,\n        nombre_bd: ficha.nombre,\n        fecha,\n        motivo: \"NO_ACTIVO\",\n      });\n      continue;\n    }\n\n    if (ficha.verificado !== \"SI\") {\n      incidencias.push({\n        telefono,\n        nombre_encuesta: nombreEncuesta,\n        nombre_bd: ficha.nombre,\n        fecha,\n        motivo: \"NO_VERIFICADO\",\n      });\n      continue;\n    }\n\n    if (\n      nombreEncuesta &&\n      ficha.nombre &&\n      normalizeText(nombreEncuesta) !== normalizeText(ficha.nombre)\n    ) {\n      incidencias.push({\n        telefono,\n        nombre_encuesta: nombreEncuesta,\n        nombre_bd: ficha.nombre,\n        fecha,\n        motivo: \"NOMBRE_DISTINTO\",\n      });\n    }\n\n    if (telefonosYaIncluidos.has(telefono)) {\n      continue;\n    }\n\n    telefonosYaIncluidos.add(telefono);\n\n    camarerosValidos.push({\n      telefono,\n      nombre: ficha.nombre,\n      tiene_coche: tieneCoche,\n      observaciones: observaciones,\n      fecha_alta: ficha.fecha_alta,\n      horas_trabajadas: ficha.horas_trabajadas,\n      nota: ficha.nota,\n      fecha_ultimo_evento: ficha.fecha_ultimo_evento,\n      activo: ficha.activo,\n      verificado: ficha.verificado,\n    });\n  }\n\n  // Orden opcional útil para el siguiente paso:\n  // mejor nota primero, y en empate menos horas trabajadas\n  camarerosValidos.sort((a, b) => {\n    if (b.nota !== a.nota) return b.nota - a.nota;\n    return a.horas_trabajadas - b.horas_trabajadas;\n  });\n\n  listaEventos.sort((a, b) => a.prioridad - b.prioridad);\n\n  salida.push({\n    json: {\n      fecha,\n      eventos: listaEventos,\n      total_eventos: listaEventos.length,\n      camareros_validos: camarerosValidos,\n      total_camareros_validos: camarerosValidos.length,\n      incidencias,\n      total_incidencias: incidencias.length,\n    }\n  });\n}\n\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "64d7a30e-1736-43bb-856f-5a5c6b22a1ea",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres un sistema de optimización de asignación de camareros para múltiples eventos en un mismo día.\n\nOBJETIVO:\nAsignar camareros a TODOS los eventos maximizando la suma total de \"score_general\" en el conjunto global.\n\nREGLAS OBLIGATORIAS:\n- Cada evento debe tener EXACTAMENTE su número de \"camareros_necesarios\"\n- Un camarero NO puede estar asignado a más de un evento\n- Para cada evento: al menos ceil(camareros_necesarios / 5) deben tener coche\n- Maximiza la suma total de \"score_general\"\n- Prioriza siempre candidatos con mayor \"score_general\"\n- No elijas camareros con menor \"score_general\" si hay otros disponibles con mayor \"score_general\" que cumplen las mismas restricciones\n- No inventes datos\n- Solo puedes usar teléfonos presentes en la lista de candidatos\n- No puedes devolver teléfonos vacíos\n- No repitas teléfonos entre eventos\n\nDATOS:\nEventos del día:\n{{ JSON.stringify($json.eventos) }}\n\nCandidatos del día:\n{{ JSON.stringify($json.camareros_validos) }}\n\nINSTRUCCIONES:\n1. Considera TODOS los eventos conjuntamente\n2. Optimiza globalmente, no evento por evento de forma aislada\n3. Distribuye los mejores candidatos entre eventos evitando conflictos\n4. Cumple TODAS las restricciones para CADA evento\n5. Verifica que ningún teléfono se repite entre eventos\n6. Verifica que cada evento tiene EXACTAMENTE el número requerido\n7. Verifica que cada evento cumple la restricción mínima de coches\n8. Devuelve para cada asignado los mismos datos que aparecen en la lista de candidatos: telefono, nombre, score_general y tiene_coche\n\nFORMATO DE RESPUESTA OBLIGATORIO:\n{\n  \"asignaciones\": [\n    {\n      \"event_id\": \"...\",\n      \"asignados\": [\n        {\n          \"telefono\": \"...\",\n          \"nombre\": \"...\",\n          \"score_general\": 0,\n          \"tiene_coche\": true\n        }\n      ]\n    }\n  ]\n}\n\nPROHIBIDO:\n- Explicaciones\n- Markdown\n- Texto fuera del JSON"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        0
+      ],
+      "id": "35c2c967-d3f7-4908-b4da-51d6f2e39abe",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rhvYGIztTMPYbAyB",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "telefono",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        432,
+        -144
+      ],
+      "id": "c6baec60-1c99-4b23-aa2a-fb8488b41679",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.content.parts[0].text;\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  throw new Error(\"Respuesta de Gemini no es JSON válido\");\n}\n\nreturn [\n  {\n    json: parsed\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        0
+      ],
+      "id": "19f9102a-3999-4fd0-82e4-076c2ab0e0eb",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        608,
+        0
+      ],
+      "id": "f650a107-de21-4da1-8217-f5e4ba582a38",
+      "name": "Append"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Encuesta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "BD_Camareros",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Eventos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encuesta": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BD_Camareros": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Eventos": {
+      "main": [
+        [
+          {
+            "node": "Append",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "517fa4bd-5984-4d37-b719-206f69df495e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
+  },
+  "id": "CSAM25v57YbdT6k7",
+  "tags": []
+}
