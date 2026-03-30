@@ -1,5 +1,5 @@
 {
-  "name": "automanager4eventsV2",
+  "name": "Laurel Catering v2",
   "nodes": [
     {
       "parameters": {},
@@ -9,7 +9,7 @@
         0,
         0
       ],
-      "id": "366a61ca-6e00-408a-b66c-19fe67b7a118",
+      "id": "a8594ed3-cea6-4790-b8c9-f0b238245b80",
       "name": "When clicking ‘Execute workflow’"
     },
     {
@@ -23,7 +23,7 @@
         832,
         -496
       ],
-      "id": "ab04ceee-5621-4917-94c0-3c5e13c048a1",
+      "id": "b0e11c4f-c298-4fb3-8f11-29ce0e928e9d",
       "name": "Sticky Note"
     },
     {
@@ -36,7 +36,7 @@
         576,
         560
       ],
-      "id": "66ea8c50-d39a-4e25-b951-ef42bca9156f",
+      "id": "2ae79414-f4e9-4e1e-9b3b-50425d40f6c2",
       "name": "Sticky Note1"
     },
     {
@@ -51,7 +51,7 @@
         1216,
         -416
       ],
-      "id": "223c75b6-dee6-47f3-a969-90f33ca60d37",
+      "id": "cb4ff158-5b27-4843-83af-44b008c7d76b",
       "name": "Sticky Note4"
     },
     {
@@ -79,7 +79,7 @@
         288,
         -256
       ],
-      "id": "b46a9bd6-7c98-43be-9629-cd5655200c97",
+      "id": "dfe45fb2-47aa-4fbe-9fb4-9d373654518f",
       "name": "Encuesta",
       "alwaysOutputData": true,
       "executeOnce": false,
@@ -115,10 +115,10 @@
         288,
         0
       ],
-      "id": "07a6b5e2-a81c-4a5c-aa5b-5498b03d3a87",
+      "id": "31b91de4-567b-47af-824b-b104897780de",
       "name": "BD_Camareros",
       "alwaysOutputData": true,
-      "executeOnce": false,
+      "executeOnce": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "hFR90SOt5vNH1Zry",
@@ -150,7 +150,7 @@
         288,
         352
       ],
-      "id": "7eaa5a8e-09f2-4358-8c95-02beee227bdf",
+      "id": "75ec2f7f-d2fb-4fe8-8295-f790fee12b4f",
       "name": "Eventos",
       "alwaysOutputData": true,
       "executeOnce": false,
@@ -168,10 +168,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        800,
+        768,
         0
       ],
-      "id": "64d7a30e-1736-43bb-856f-5a5c6b22a1ea",
+      "id": "23196114-6947-496b-ad3c-7d72a3e87e42",
       "name": "Code in JavaScript"
     },
     {
@@ -185,7 +185,7 @@
         "messages": {
           "values": [
             {
-              "content": "=Eres un sistema de optimización de asignación de camareros para múltiples eventos en un mismo día.\n\nOBJETIVO:\nAsignar camareros a TODOS los eventos maximizando la suma total de \"score_general\" en el conjunto global.\n\nREGLAS OBLIGATORIAS:\n- Cada evento debe tener EXACTAMENTE su número de \"camareros_necesarios\"\n- Un camarero NO puede estar asignado a más de un evento\n- Para cada evento: al menos ceil(camareros_necesarios / 5) deben tener coche\n- Maximiza la suma total de \"score_general\"\n- Prioriza siempre candidatos con mayor \"score_general\"\n- No elijas camareros con menor \"score_general\" si hay otros disponibles con mayor \"score_general\" que cumplen las mismas restricciones\n- No inventes datos\n- Solo puedes usar teléfonos presentes en la lista de candidatos\n- No puedes devolver teléfonos vacíos\n- No repitas teléfonos entre eventos\n\nDATOS:\nEventos del día:\n{{ JSON.stringify($json.eventos) }}\n\nCandidatos del día:\n{{ JSON.stringify($json.camareros_validos) }}\n\nINSTRUCCIONES:\n1. Considera TODOS los eventos conjuntamente\n2. Optimiza globalmente, no evento por evento de forma aislada\n3. Distribuye los mejores candidatos entre eventos evitando conflictos\n4. Cumple TODAS las restricciones para CADA evento\n5. Verifica que ningún teléfono se repite entre eventos\n6. Verifica que cada evento tiene EXACTAMENTE el número requerido\n7. Verifica que cada evento cumple la restricción mínima de coches\n8. Devuelve para cada asignado los mismos datos que aparecen en la lista de candidatos: telefono, nombre, score_general y tiene_coche\n\nFORMATO DE RESPUESTA OBLIGATORIO:\n{\n  \"asignaciones\": [\n    {\n      \"event_id\": \"...\",\n      \"asignados\": [\n        {\n          \"telefono\": \"...\",\n          \"nombre\": \"...\",\n          \"score_general\": 0,\n          \"tiene_coche\": true\n        }\n      ]\n    }\n  ]\n}\n\nPROHIBIDO:\n- Explicaciones\n- Markdown\n- Texto fuera del JSON"
+              "content": "=Eres un sistema de optimización de asignación de camareros para eventos.\n\nOBJETIVO:\nSeleccionar EXACTAMENTE N camareros maximizando la suma total de score_general.\n\nREGLAS OBLIGATORIAS:\n- Selecciona exactamente {{ $json.eventos[0].camareros_necesarios }} camareros\n- Debe haber al menos {{ Math.ceil($json.eventos[0].camareros_necesarios / 5) }} camareros con coche\n- Maximiza la suma total de \"score_general\"\n- No inventes datos\n- Solo puedes elegir teléfonos que aparezcan en la lista de candidatos\n- No puedes devolver teléfonos vacíos\n\nDATOS:\nEvento:\n{{ JSON.stringify($json[\"eventos\"][0]) }}\n\nCandidatos:\n{{ JSON.stringify($json[\"camareros_validos\"]) }}\n\nINSTRUCCIONES:\n1. Ordena mentalmente los candidatos por score_general de mayor a menor\n2. Selecciona los mejores cumpliendo TODAS las restricciones\n3. No hagas elecciones aleatorias\n4. No elijas candidatos con peor score_general si hay otros mejores disponibles\n5. Asegúrate de que todos los teléfonos seleccionados existen en los candidatos\n\nFORMATO DE RESPUESTA OBLIGATORIO:\n{\n  \"event_id\": \"{{ $json.eventos[0].event_id }}\",\n  \"asignados\": [\n    { \"telefono\": \"...\" },\n    { \"telefono\": \"...\" }\n  ]\n}\n\nPROHIBIDO:\n- Explicaciones\n- Markdown\n- Texto fuera del JSON"
             }
           ]
         },
@@ -199,7 +199,7 @@
         960,
         0
       ],
-      "id": "35c2c967-d3f7-4908-b4da-51d6f2e39abe",
+      "id": "4e7f39d6-01b9-4344-acd3-3e98c6562fcc",
       "name": "Message a model",
       "credentials": {
         "googlePalmApi": {
@@ -207,46 +207,6 @@
           "name": "Google Gemini(PaLM) Api account"
         }
       }
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "fieldsToMatchString": "telefono",
-        "joinMode": "keepEverything",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        432,
-        -144
-      ],
-      "id": "c6baec60-1c99-4b23-aa2a-fb8488b41679",
-      "name": "Merge"
-    },
-    {
-      "parameters": {
-        "jsCode": "const raw = $json.content.parts[0].text;\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  throw new Error(\"Respuesta de Gemini no es JSON válido\");\n}\n\nreturn [\n  {\n    json: parsed\n  }\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1312,
-        0
-      ],
-      "id": "19f9102a-3999-4fd0-82e4-076c2ab0e0eb",
-      "name": "Code in JavaScript1"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        608,
-        0
-      ],
-      "id": "f650a107-de21-4da1-8217-f5e4ba582a38",
-      "name": "Append"
     }
   ],
   "pinData": {},
@@ -276,7 +236,7 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Code in JavaScript",
             "type": "main",
             "index": 0
           }
@@ -287,9 +247,9 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Code in JavaScript",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -298,9 +258,9 @@
       "main": [
         [
           {
-            "node": "Append",
+            "node": "Code in JavaScript",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -318,35 +278,7 @@
     },
     "Message a model": {
       "main": [
-        [
-          {
-            "node": "Code in JavaScript1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Merge": {
-      "main": [
-        [
-          {
-            "node": "Append",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Append": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     }
   },
@@ -356,11 +288,11 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "517fa4bd-5984-4d37-b719-206f69df495e",
+  "versionId": "c592d83e-3333-453c-b019-44a768eb2e57",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
   },
-  "id": "CSAM25v57YbdT6k7",
+  "id": "0mjRI5laZShHE6TD",
   "tags": []
 }
