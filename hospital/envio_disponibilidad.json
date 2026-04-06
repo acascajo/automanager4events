@@ -1,0 +1,285 @@
+{
+  "name": "Envío correo disponibilidad",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        0
+      ],
+      "id": "9e112649-b872-441c-8918-cfee7c951333",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "content": "Ahora mismo lo hago con triggers manuales pero en su momento será en función del tiempo. 1,5 meses antes de que comience el peridoo"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        -416
+      ],
+      "id": "1df11cc0-7e72-4c5c-b13f-0fe9e74f4cdb",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "92b9407a-f97e-4811-8f38-7e127645545c",
+              "name": "periodo_label",
+              "value": "Junio 2026",
+              "type": "string"
+            },
+            {
+              "id": "f003e35d-d488-4f0d-87f9-75ba8f9d2dc8",
+              "name": "fecha_inicio_periodo",
+              "value": "2026-06-01",
+              "type": "string"
+            },
+            {
+              "id": "e702d6d4-3e93-4d3f-b3be-41c00869ccea",
+              "name": "fecha_fin_periodo",
+              "value": "2026-06-30",
+              "type": "string"
+            },
+            {
+              "id": "e9483122-75d4-4451-a5df-02ae344314fd",
+              "name": "fecha_limite_respuesta",
+              "value": "2026-05-10",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -512,
+        -144
+      ],
+      "id": "f2fd331d-e119-4ac0-a2a0-82fbcdec172e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
+          "mode": "list",
+          "cachedResultName": "Médicos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -512,
+        176
+      ],
+      "id": "d2c38565-7e76-420e-8556-6c350ed4b2f9",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e302bd46-162e-48ec-a945-e0fe2a75bb1d",
+              "leftValue": "={{ $json.activo }}",
+              "rightValue": "sí",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "8cd84071-7ab8-4899-8380-1f7714af2e73",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -304,
+        176
+      ],
+      "id": "482508bc-46e5-4655-a0ee-e3a7f8a99a1b",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Disponibilidad guardias {{$json.periodo_label}}",
+        "message": "=<p>Hola {{$json.nombre}},</p>\n\n<p>Estamos preparando la planificación de guardias del periodo <strong>{{$json.periodo_label}}</strong>.</p>\n\n<p>Por favor, responde a este correo antes del <strong>{{$json.fecha_limite_respuesta}}</strong> indicando:</p>\n\n<ul>\n  <li>Días en los que <strong>no puedes hacer guardia</strong>.</li>\n  <li>Días en los que <strong>preferirías librar</strong>.</li>\n  <li>Días en los que <strong>te gustaría hacer guardia</strong>.</li>\n  <li>Días en los que <strong>te gustaría hacer doblete</strong>.</li>\n  <li>Tu rotación durante ese periodo.</li>\n  <li>Si estás en <strong>rotación externa</strong>.</li>\n</ul>\n\n<p>Formato sugerido:</p>\n\n<p>\nNo puedo: ...<br>\nPreferiría librar: ...<br>\nMe gustaría hacer guardia: ...<br>\nDobletes: ...<br>\nRotación: ...<br>\nRotación externa: sí/no\n</p>\n\n<p>Gracias.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        32
+      ],
+      "id": "36db310e-8b01-4525-9614-bff65a6f7da1",
+      "name": "Send a message",
+      "webhookId": "31801804-13ba-4570-9247-da0bc26888d2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KeKu9ruznzpX0w9r",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        32
+      ],
+      "id": "751e668b-006c-4a40-8fbf-0b274abf0c2f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const itemsEdit = $items(\"Edit Fields\");\nconst itemsFilter = $items(\"Filter\");\n\nif (!itemsEdit.length) {\n  throw new Error(\"No hay datos en Edit Fields\");\n}\n\nconst periodo = itemsEdit[0].json;\n\nconst resultado = itemsFilter.map(item => {\n  return {\n    json: {\n      medico_id: item.json.medico_id,\n      nombre: item.json.nombre,\n      email: item.json.email,\n      activo: item.json.activo,\n      periodo_label: periodo.periodo_label,\n      fecha_inicio_periodo: periodo.fecha_inicio_periodo,\n      fecha_fin_periodo: periodo.fecha_fin_periodo,\n      fecha_limite_respuesta: periodo.fecha_limite_respuesta\n    }\n  };\n});\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        32
+      ],
+      "id": "e194f360-6894-493b-ad61-c5a6684e28a5",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2e99be19-cb90-4373-b502-0b5aacf62bac",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
+  },
+  "id": "1CuW8ept6fr8URPJ0J4yA",
+  "tags": []
+}
