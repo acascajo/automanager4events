@@ -1,0 +1,236 @@
+{
+  "name": "02_lectura_respuestas",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        16
+      ],
+      "id": "0ac656ef-ce8d-4a70-bc79-29f5e3ef9e1e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "simple": false,
+        "filters": {
+          "q": "=in:inbox subject:\"Disponibilidad guardias\" -from:albendeap2@gmail.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -752,
+        -96
+      ],
+      "id": "0c7423c6-2561-46c6-a03b-7bc4f864360e",
+      "name": "Get many messages",
+      "webhookId": "c04b4bfa-be1b-4d39-b9c8-1798f730f271",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "KeKu9ruznzpX0w9r",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c2327bba-b360-43de-ad36-ac4d113f4f84",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Disponibilidad guardias",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -560,
+        -96
+      ],
+      "id": "c6e66163-b194-4f78-9d7d-292cebd06fd8",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
+          "mode": "list",
+          "cachedResultName": "Médicos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "BD",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -560,
+        128
+      ],
+      "id": "b89bc2c9-47e7-4da6-a20c-39a94c199522",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const remitenteEmail =\n    item.json.from?.value?.[0]?.address?.toLowerCase().trim() || \"\";\n\n  let texto = item.json.text || \"\";\n\n  // Cortar la parte citada del correo original\n  texto = texto.split(/\\nEl .* escribió:\\n/i)[0];\n\n  // Eliminar líneas citadas que empiezan por >\n  texto = texto\n    .split(\"\\n\")\n    .filter(line => !line.trim().startsWith(\">\"))\n    .join(\"\\n\");\n\n  // Limpiar espacios excesivos\n  texto = texto.replace(/\\n{3,}/g, \"\\n\\n\").trim();\n\n  return {\n    json: {\n      subject: item.json.subject || \"\",\n      remitente_email: remitenteEmail,\n      messageId: item.json.messageId || \"\",\n      inReplyTo: item.json.inReplyTo || \"\",\n      references: item.json.references || \"\",\n      date: item.json.date || \"\",\n      texto_limpio: texto\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -96
+      ],
+      "id": "18815580-65c2-4842-ab91-9e04d0b6a235",
+      "name": "Code limpiar correo"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        16
+      ],
+      "id": "33a6a269-f356-4626-a3ed-036652307876",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const correos = $items(\"Code limpiar correo\");\nconst medicos = $items(\"Get row(s) in sheet\");\n\nconst resultado = [];\n\nfor (const correo of correos) {\n  const remitente = (correo.json.remitente_email || \"\").toLowerCase().trim();\n  const subject = correo.json.subject || \"\";\n  const inReplyTo = correo.json.inReplyTo || \"\";\n\n  const asuntoValido = subject.includes(\"Disponibilidad guardias\");\n  const hiloValido = inReplyTo !== \"\";\n\n  const coincidencias = medicos.filter(m => {\n    const email = (m.json.email || \"\").toLowerCase().trim();\n    const activo = (m.json.activo || \"\").toLowerCase().trim();\n    return email === remitente && (activo === \"sí\" || activo === \"si\");\n  });\n\n  if (asuntoValido && hiloValido && coincidencias.length === 1) {\n    const medico = coincidencias[0].json;\n\n    resultado.push({\n      json: {\n        medico_id: medico.medico_id,\n        nombre_medico: medico.nombre,\n        email_medico: medico.email,\n        remitente_email: correo.json.remitente_email,\n        subject: correo.json.subject,\n        messageId: correo.json.messageId,\n        inReplyTo: correo.json.inReplyTo,\n        references: correo.json.references,\n        date: correo.json.date,\n        texto_limpio: correo.json.texto_limpio,\n        validado: true\n      }\n    });\n  }\n}\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        16
+      ],
+      "id": "3864b5be-291c-4f6b-a188-da7ff5140122",
+      "name": "Validar médico"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Code limpiar correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code limpiar correo": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Validar médico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar médico": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "111ed785-6505-4630-9766-ad8f882c057b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
+  },
+  "id": "kZVjld-ISskdBUUO-nl8d",
+  "tags": []
+}
