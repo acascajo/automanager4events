@@ -1,5 +1,5 @@
 {
-  "name": "Envío correo disponibilidad",
+  "name": "01_envío_correo_disponibilidad",
   "nodes": [
     {
       "parameters": {},
