@@ -72,6 +72,397 @@
     },
     {
       "parameters": {
+        "jsCode": "return items.map(item => {\n  const remitenteEmail =\n    item.json.from?.value?.[0]?.address?.toLowerCase().trim() || \"\";\n\n  let texto = item.json.text || \"\";\n\n  // Cortar la parte citada del correo original\n  texto = texto.split(/\\nEl .* escribió:\\n/i)[0];\n\n  // Eliminar líneas citadas que empiezan por >\n  texto = texto\n    .split(\"\\n\")\n    .filter(line => !line.trim().startsWith(\">\"))\n    .join(\"\\n\");\n\n  // Limpiar espacios excesivos\n  texto = texto.replace(/\\n{3,}/g, \"\\n\\n\").trim();\n\n  return {\n    json: {\n      subject: item.json.subject || \"\",\n      remitente_email: remitenteEmail,\n      messageId: item.json.messageId || \"\",\n      inReplyTo: item.json.inReplyTo || \"\",\n      references: item.json.references || \"\",\n      date: item.json.date || \"\",\n      texto_limpio: texto\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -96
+      ],
+      "id": "18815580-65c2-4842-ab91-9e04d0b6a235",
+      "name": "Code limpiar correo"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        0,
+        -96
+      ],
+      "id": "33a6a269-f356-4626-a3ed-036652307876",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const correos = $items(\"Code limpiar correo\");\nconst medicos = $items(\"BD Médicos\");\n\nconst resultado = [];\n\nfor (const correo of correos) {\n  const remitente = (correo.json.remitente_email || \"\").toLowerCase().trim();\n  const subject = correo.json.subject || \"\";\n  const inReplyTo = correo.json.inReplyTo || \"\";\n\n  const asuntoValido = subject.includes(\"Disponibilidad guardias\");\n  const hiloValido = inReplyTo !== \"\";\n\n  const coincidencias = medicos.filter(m => {\n    const email = (m.json.email || \"\").toLowerCase().trim();\n    const activo = (m.json.activo || \"\").toLowerCase().trim();\n    return email === remitente && (activo === \"sí\" || activo === \"si\");\n  });\n\n  if (asuntoValido && hiloValido && coincidencias.length === 1) {\n    const medico = coincidencias[0].json;\n\n    resultado.push({\n      json: {\n        medico_id: medico.medico_id,\n        nombre_medico: medico.nombre,\n        email_medico: medico.email,\n        remitente_email: correo.json.remitente_email,\n        subject: correo.json.subject,\n        messageId: correo.json.messageId,\n        inReplyTo: correo.json.inReplyTo,\n        references: correo.json.references,\n        date: correo.json.date,\n        texto_limpio: correo.json.texto_limpio,\n        validado: true\n      }\n    });\n  }\n}\n\nreturn resultado;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -96
+      ],
+      "id": "3864b5be-291c-4f6b-a188-da7ff5140122",
+      "name": "Validar médico"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analiza el siguiente correo de un médico sobre su disponibilidad para guardias.\n\nDevuelve SOLO un JSON válido con esta estructura exacta:\n\n{\n  \"no_puedo\": [],\n  \"preferiria_librar\": [],\n  \"prefiere_guardia\": [],\n  \"dobletes\": [],\n  \"rotacion\": \"\",\n  \"rotacion_externa\": false,\n  \"restricciones\": [],\n  \"observaciones\": \"\"\n}\n\nReglas:\n- Asume que el periodo es Junio de 2026.\n- Si el médico menciona días sueltos como \"3, 10, 18\", conviértelos a formato YYYY-MM-DD dentro de Junio 2026.\n- \"no_puedo\" = días en los que no puede hacer guardia bajo ninguna circunstancia.\n- \"preferiria_librar\" = días que preferiría evitar.\n- \"prefiere_guardia\" = días que le gustaría hacer guardia.\n- \"dobletes\" = días concretos en los que quiere hacer doblete.\n- \"rotacion\" = nombre breve de la rotación si aparece.\n- \"rotacion_externa\" = true o false.\n- \"restricciones\" = reglas del tipo \"no puedo martes\", \"no saliente lunes\", etc.\n- \"observaciones\" = resumen breve de información adicional útil.\n- No inventes información.\n- Si un campo no aparece, déjalo vacío.\n- Devuelve solo JSON, sin explicaciones, sin markdown y sin bloques de código.\n\nCorreo:\n{{$json.texto_limpio}}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        -96
+      ],
+      "id": "bd02fb2e-8b77-4e5e-bcb5-a77a8340ec1a",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "GJkaPHsZxSq5PO4k",
+          "name": "Google Gemini(PaLM) Api account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const validados = $items(\"Validar médico\");\n\nreturn items.map((item, index) => {\n  const raw = item.json.content?.parts?.[0]?.text || \"\";\n\n  if (!raw) {\n    throw new Error(`No se encontró texto en la respuesta de la IA para el item ${index}`);\n  }\n\n  let parsed;\n\n  try {\n    parsed = JSON.parse(raw);\n  } catch (e) {\n    throw new Error(`La respuesta de la IA no es JSON válido en el item ${index}: ${raw}`);\n  }\n\n  const previo = validados[index]?.json || {};\n\n  return {\n    json: {\n      medico_id: previo.medico_id || \"\",\n      nombre_medico: previo.nombre_medico || \"\",\n      email_medico: previo.email_medico || \"\",\n      remitente_email: previo.remitente_email || \"\",\n      subject: previo.subject || \"\",\n      messageId: previo.messageId || \"\",\n      inReplyTo: previo.inReplyTo || \"\",\n      references: previo.references || \"\",\n      date: previo.date || \"\",\n      texto_limpio: previo.texto_limpio || \"\",\n      validado: previo.validado || false,\n\n      no_puedo: parsed.no_puedo || [],\n      preferiria_librar: parsed.preferiria_librar || [],\n      prefiere_guardia: parsed.prefiere_guardia || [],\n      dobletes: parsed.dobletes || [],\n      rotacion: parsed.rotacion || \"\",\n      rotacion_externa: parsed.rotacion_externa ?? false,\n      restricciones: parsed.restricciones || [],\n      observaciones: parsed.observaciones || \"\"\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "effe95af-0922-4e88-a896-bec051db7484",
+      "name": "Transformamos en Json"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
+          "mode": "list",
+          "cachedResultName": "Guardias Hospital",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1330408410,
+          "mode": "list",
+          "cachedResultName": "Disponibilidades_guardias",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit#gid=1330408410"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_medico": "={{ $json.email_medico }}",
+            "remitente_email": "={{ $json.remitente_email }}",
+            "subject": "={{ $json.subject }}",
+            "messageId": "={{ $json.messageId }}",
+            "inReplyTo": "={{ $json.inReplyTo }}",
+            "references": "={{ $json.references }}",
+            "date": "={{ $json.date }}",
+            "fecha_procesado": "={{ new Date().toISOString() }}",
+            "texto_limpio": "={{ $json.texto_limpio }}",
+            "validado": "={{ $json.validado }}",
+            "no_puedo": "={{ $json.no_puedo }}",
+            "preferiria_librar": "={{ $json.preferiria_librar }}",
+            "prefiere_guardia": "={{ $json.prefiere_guardia }}",
+            "dobletes": "={{ $json.dobletes }}",
+            "rotacion": "={{ $json.rotacion }}",
+            "rotacion_externa": "={{ $json.rotacion_externa }}",
+            "observaciones": "={{ $json.observaciones }}",
+            "restricciones": "={{ $json.restricciones }}",
+            "periodo_label": "Junio 2026",
+            "fecha_inicio_periodo": "2026-06-01",
+            "fecha_fin_periodo": "2026-06-30"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email_medico",
+              "displayName": "email_medico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "remitente_email",
+              "displayName": "remitente_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "periodo_label",
+              "displayName": "periodo_label",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_inicio_periodo",
+              "displayName": "fecha_inicio_periodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_fin_periodo",
+              "displayName": "fecha_fin_periodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "messageId",
+              "displayName": "messageId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "inReplyTo",
+              "displayName": "inReplyTo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "references",
+              "displayName": "references",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fecha_procesado",
+              "displayName": "fecha_procesado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "texto_limpio",
+              "displayName": "texto_limpio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "validado",
+              "displayName": "validado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "no_puedo",
+              "displayName": "no_puedo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "preferiria_librar",
+              "displayName": "preferiria_librar",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "prefiere_guardia",
+              "displayName": "prefiere_guardia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dobletes",
+              "displayName": "dobletes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "rotacion",
+              "displayName": "rotacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "rotacion_externa",
+              "displayName": "rotacion_externa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "restricciones",
+              "displayName": "restricciones",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "observaciones",
+              "displayName": "observaciones",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1552,
+        224
+      ],
+      "id": "332633d2-84c0-46ad-9fa6-b926417eeac3",
+      "name": "Guardar disponibilidad",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
+          "mode": "list",
+          "cachedResultName": "Guardias Hospital",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1330408410,
+          "mode": "list",
+          "cachedResultName": "Disponibilidades_guardias",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit#gid=1330408410"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -560,
+        432
+      ],
+      "id": "7c165dee-5973-4e15-82c7-738016e70878",
+      "name": "Comprobar guardados",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
         "documentId": {
           "__rl": true,
           "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
@@ -95,7 +486,7 @@
         128
       ],
       "id": "b89bc2c9-47e7-4da6-a20c-39a94c199522",
-      "name": "Get row(s) in sheet",
+      "name": "BD Médicos",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "hFR90SOt5vNH1Zry",
@@ -104,41 +495,28 @@
       }
     },
     {
-      "parameters": {
-        "jsCode": "return items.map(item => {\n  const remitenteEmail =\n    item.json.from?.value?.[0]?.address?.toLowerCase().trim() || \"\";\n\n  let texto = item.json.text || \"\";\n\n  // Cortar la parte citada del correo original\n  texto = texto.split(/\\nEl .* escribió:\\n/i)[0];\n\n  // Eliminar líneas citadas que empiezan por >\n  texto = texto\n    .split(\"\\n\")\n    .filter(line => !line.trim().startsWith(\">\"))\n    .join(\"\\n\");\n\n  // Limpiar espacios excesivos\n  texto = texto.replace(/\\n{3,}/g, \"\\n\\n\").trim();\n\n  return {\n    json: {\n      subject: item.json.subject || \"\",\n      remitente_email: remitenteEmail,\n      messageId: item.json.messageId || \"\",\n      inReplyTo: item.json.inReplyTo || \"\",\n      references: item.json.references || \"\",\n      date: item.json.date || \"\",\n      texto_limpio: texto\n    }\n  };\n});"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -320,
-        -96
-      ],
-      "id": "18815580-65c2-4842-ab91-9e04d0b6a235",
-      "name": "Code limpiar correo"
-    },
-    {
       "parameters": {},
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        0,
-        16
+        992,
+        224
       ],
-      "id": "33a6a269-f356-4626-a3ed-036652307876",
-      "name": "Merge"
+      "id": "67f70f2e-526a-4d38-9b41-f67857267a20",
+      "name": "Merge1"
     },
     {
       "parameters": {
-        "jsCode": "const correos = $items(\"Code limpiar correo\");\nconst medicos = $items(\"Get row(s) in sheet\");\n\nconst resultado = [];\n\nfor (const correo of correos) {\n  const remitente = (correo.json.remitente_email || \"\").toLowerCase().trim();\n  const subject = correo.json.subject || \"\";\n  const inReplyTo = correo.json.inReplyTo || \"\";\n\n  const asuntoValido = subject.includes(\"Disponibilidad guardias\");\n  const hiloValido = inReplyTo !== \"\";\n\n  const coincidencias = medicos.filter(m => {\n    const email = (m.json.email || \"\").toLowerCase().trim();\n    const activo = (m.json.activo || \"\").toLowerCase().trim();\n    return email === remitente && (activo === \"sí\" || activo === \"si\");\n  });\n\n  if (asuntoValido && hiloValido && coincidencias.length === 1) {\n    const medico = coincidencias[0].json;\n\n    resultado.push({\n      json: {\n        medico_id: medico.medico_id,\n        nombre_medico: medico.nombre,\n        email_medico: medico.email,\n        remitente_email: correo.json.remitente_email,\n        subject: correo.json.subject,\n        messageId: correo.json.messageId,\n        inReplyTo: correo.json.inReplyTo,\n        references: correo.json.references,\n        date: correo.json.date,\n        texto_limpio: correo.json.texto_limpio,\n        validado: true\n      }\n    });\n  }\n}\n\nreturn resultado;"
+        "jsCode": "const nuevos = $items(\"Transformamos en Json\");\nconst existentes = $items(\"Comprobar guardados\");\n\n// messageId ya guardados\nconst idsExistentes = new Set(\n  existentes\n    .map(item => (item.json.messageId || \"\").trim())\n    .filter(Boolean)\n);\n\n// solo deja pasar los nuevos\nreturn nuevos.filter(item => {\n  const id = (item.json.messageId || \"\").trim();\n  return id && !idsExistentes.has(id);\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        176,
-        16
+        1280,
+        224
       ],
-      "id": "3864b5be-291c-4f6b-a188-da7ff5140122",
-      "name": "Validar médico"
+      "id": "31e406b2-3001-451b-8316-5fc115865ec6",
+      "name": "Code in JavaScript"
     }
   ],
   "pinData": {},
@@ -152,7 +530,12 @@
             "index": 0
           },
           {
-            "node": "Get row(s) in sheet",
+            "node": "BD Médicos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Comprobar guardados",
             "type": "main",
             "index": 0
           }
@@ -181,17 +564,6 @@
         ]
       ]
     },
-    "Get row(s) in sheet": {
-      "main": [
-        [
-          {
-            "node": "Merge",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
     "Code limpiar correo": {
       "main": [
         [
@@ -216,7 +588,84 @@
     },
     "Validar médico": {
       "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Transformamos en Json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transformamos en Json": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar guardados": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "BD Médicos": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Guardar disponibilidad": {
+      "main": [
         []
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Guardar disponibilidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -226,7 +675,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "111ed785-6505-4630-9766-ad8f882c057b",
+  "versionId": "d18b4035-6b65-4436-848f-db16a86e568d",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
