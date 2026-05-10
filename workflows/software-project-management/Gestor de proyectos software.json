@@ -1,0 +1,513 @@
+{
+  "name": "Gestor de proyectos software",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "24b932d2-f867-4265-8f43-f0f9db728632",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM",
+          "mode": "list",
+          "cachedResultName": "gestor_proyectos_software",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Equipo",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        -224
+      ],
+      "id": "aa0d4146-92ac-4144-9708-4456f7a1c0fd",
+      "name": "Leer Equipo",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM",
+          "mode": "list",
+          "cachedResultName": "gestor_proyectos_software",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 904892827,
+          "mode": "list",
+          "cachedResultName": "Proyectos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit#gid=904892827"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        0
+      ],
+      "id": "cfc9f816-6862-4aec-87a4-ccfa0b73fb9b",
+      "name": "Leer Proyectos",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM",
+          "mode": "list",
+          "cachedResultName": "gestor_proyectos_software",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1814808284,
+          "mode": "list",
+          "cachedResultName": "Tareas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit#gid=1814808284"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        240
+      ],
+      "id": "849e11d0-08ba-4939-9328-4bce2016a93b",
+      "name": "Leer Tareas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        -16
+      ],
+      "id": "62b11dc4-84d4-44b4-b266-4b3dbac88209",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\n\nfunction splitList(value) {\n  if (!value) return [];\n  return String(value)\n    .split(',')\n    .map(s => s.trim())\n    .filter(Boolean);\n}\n\nfunction norm(value) {\n  return String(value || '')\n    .trim()\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '');\n}\n\nconst equipo = [];\nconst proyectos = [];\nconst tareas = [];\n\nfor (const item of items) {\n  if (item.persona_id) {\n    equipo.push({\n      persona_id: String(item.persona_id).trim(),\n      nombre: String(item.nombre || '').trim(),\n      rol: String(item.rol || '').trim(),\n      seniority: String(item.seniority || '').trim(),\n      skills: splitList(item.skills),\n      skills_norm: splitList(item.skills).map(norm),\n      capacidad_horas_semana: Number(item.capacidad_horas_semana || 0),\n      disponibilidad: String(item.disponibilidad || '').trim(),\n      disponible: norm(item.disponibilidad) === 'disponible',\n      observaciones: item.observaciones || '',\n    });\n  }\n\n  if (item.proyecto_id && !item.tarea_id) {\n    proyectos.push({\n      proyecto_id: String(item.proyecto_id).trim(),\n      nombre: String(item.nombre || '').trim(),\n      cliente: String(item.cliente || '').trim(),\n      prioridad: Number(item.prioridad || 0),\n      fecha_inicio: item.fecha_inicio || '',\n      deadline: item.deadline || '',\n      estado: String(item.estado || '').trim(),\n      activo: norm(item.estado) === 'activo',\n      horas_estimadas: Number(item.horas_estimadas || 0),\n      observaciones: item.observaciones || '',\n    });\n  }\n\n  if (item.tarea_id) {\n    tareas.push({\n      tarea_id: String(item.tarea_id).trim(),\n      proyecto_id: String(item.proyecto_id || '').trim(),\n      nombre: String(item.nombre || '').trim(),\n      descripcion: item.descripcion || '',\n      skills_requeridas: splitList(item.skills_requeridas),\n      skills_requeridas_norm: splitList(item.skills_requeridas).map(norm),\n      horas_estimadas: Number(item.horas_estimadas || 0),\n      prioridad: Number(item.prioridad || 0),\n      deadline: item.deadline || '',\n      dependencias: splitList(item.dependencias),\n      bloqueada: norm(item.bloqueada) === 'si' || norm(item.bloqueada) === 'sí',\n      persona_preferida: String(item.persona_preferida || '').trim(),\n    });\n  }\n}\n\nconst proyectoById = Object.fromEntries(\n  proyectos.map(p => [p.proyecto_id, p])\n);\n\nconst equipoByNombre = Object.fromEntries(\n  equipo.map(p => [norm(p.nombre), p])\n);\n\nconst tareasPreparadas = tareas.map(t => {\n  const proyecto = proyectoById[t.proyecto_id] || {};\n  const preferida = equipoByNombre[norm(t.persona_preferida)];\n\n  return {\n    ...t,\n    proyecto_nombre: proyecto.nombre || '',\n    cliente: proyecto.cliente || '',\n    prioridad_proyecto: proyecto.prioridad || 0,\n    deadline_proyecto: proyecto.deadline || '',\n    persona_preferida_id: preferida?.persona_id || '',\n    persona_preferida_existe: Boolean(preferida),\n  };\n});\n\nconst resumen = {\n  total_personas: equipo.length,\n  total_proyectos: proyectos.length,\n  total_tareas: tareas.length,\n  horas_totales_tareas: tareas.reduce((sum, t) => sum + t.horas_estimadas, 0),\n  capacidad_total_semanal: equipo.reduce((sum, p) => sum + p.capacidad_horas_semana, 0),\n  tareas_bloqueadas: tareas.filter(t => t.bloqueada).length,\n};\n\nreturn [\n  {\n    json: {\n      equipo,\n      proyectos,\n      tareas: tareasPreparadas,\n      resumen_input: resumen,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        0
+      ],
+      "id": "16f0cb9a-39b7-4559-8080-979756ee6350",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst data = Array.isArray(input) ? input[0] : input;\n\nconst equipo = data.equipo || [];\nconst proyectos = data.proyectos || [];\nconst tareas = data.tareas || [];\n\nconst PERIODO = data.periodo || 'junio_2026';\n\nfunction norm(value) {\n  return String(value || '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim()\n    .toLowerCase();\n}\n\nfunction asArray(value) {\n  if (Array.isArray(value)) return value;\n  if (!value) return [];\n  return String(value)\n    .split(',')\n    .map(v => v.trim())\n    .filter(Boolean);\n}\n\nfunction dateValue(value) {\n  if (!value) return 9999999999999;\n  return new Date(value).getTime();\n}\n\nfunction seniorityBonus(seniority) {\n  const s = norm(seniority);\n  if (s === 'senior') return 20;\n  if (s === 'mid') return 10;\n  if (s === 'junior') return 0;\n  return 0;\n}\n\nconst personas = equipo\n  .filter(p => p.disponible !== false && norm(p.disponibilidad) !== 'no disponible')\n  .map(p => ({\n    ...p,\n    skills_norm: p.skills_norm || asArray(p.skills).map(norm),\n    horas_asignadas: 0,\n    tareas: [],\n  }));\n\nconst personaById = Object.fromEntries(personas.map(p => [p.persona_id, p]));\nconst personaByName = Object.fromEntries(personas.map(p => [norm(p.nombre), p]));\n\nconst proyectoById = Object.fromEntries(proyectos.map(p => [p.proyecto_id, p]));\n\nconst tareasOrdenadas = [...tareas]\n  .filter(t => !t.bloqueada)\n  .sort((a, b) => {\n    const prioridadA = Number(a.prioridad || 0) + Number(a.prioridad_proyecto || 0);\n    const prioridadB = Number(b.prioridad || 0) + Number(b.prioridad_proyecto || 0);\n\n    if (prioridadB !== prioridadA) return prioridadB - prioridadA;\n\n    return dateValue(a.deadline) - dateValue(b.deadline);\n  });\n\nconst asignaciones = [];\nconst advertencias = [];\n\nfunction evaluarPersona(tarea, persona) {\n  const requeridas = tarea.skills_requeridas_norm || asArray(tarea.skills_requeridas).map(norm);\n  const personaSkills = persona.skills_norm || [];\n\n  const matched = requeridas.filter(s => personaSkills.includes(s));\n  const missing = requeridas.filter(s => !personaSkills.includes(s));\n\n  const horas = Number(tarea.horas_estimadas || 0);\n  const capacidadRestante = Number(persona.capacidad_horas_semana || 0) - Number(persona.horas_asignadas || 0);\n\n  const personaPreferidaId = tarea.persona_preferida_id;\n  const personaPreferidaNombre = norm(tarea.persona_preferida);\n\n  const esPreferida =\n    personaPreferidaId === persona.persona_id ||\n    personaPreferidaNombre === norm(persona.nombre);\n\n  let score = 0;\n\n  score += matched.length * 40;\n  score -= missing.length * 35;\n  score += seniorityBonus(persona.seniority);\n  score += esPreferida ? 35 : 0;\n\n  if (capacidadRestante >= horas) {\n    score += 50;\n  } else {\n    score -= Math.abs(capacidadRestante - horas) * 12;\n  }\n\n  score += Number(tarea.prioridad || 0) * 5;\n  score += Number(tarea.prioridad_proyecto || 0) * 5;\n\n  return {\n    persona,\n    score,\n    matched,\n    missing,\n    capacidadRestante,\n    cabe: capacidadRestante >= horas,\n    esPreferida,\n  };\n}\n\nfor (const tarea of tareasOrdenadas) {\n  const horas = Number(tarea.horas_estimadas || 0);\n\n  let candidatos = personas\n    .map(persona => evaluarPersona(tarea, persona))\n    .filter(c => c.cabe);\n\n  if (candidatos.length === 0) {\n    asignaciones.push({\n      tarea_id: tarea.tarea_id,\n      tarea: tarea.nombre,\n      proyecto_id: tarea.proyecto_id,\n      proyecto: tarea.proyecto_nombre || proyectoById[tarea.proyecto_id]?.nombre || '',\n      cliente: tarea.cliente || proyectoById[tarea.proyecto_id]?.cliente || '',\n      persona_id: '',\n      persona: '',\n      rol: '',\n      seniority: '',\n      estado_asignacion: 'sin_asignar',\n      horas_estimadas: horas,\n      deadline: tarea.deadline,\n      prioridad: tarea.prioridad,\n      skills_requeridas: asArray(tarea.skills_requeridas).join(', '),\n      skills_match: '',\n      score_asignacion: '',\n      motivo: 'Sin persona con capacidad suficiente',\n    });\n\n    advertencias.push({\n      tipo: 'TAREA_SIN_ASIGNAR',\n      tarea_id: tarea.tarea_id,\n      tarea: tarea.nombre,\n      detalle: `No hay capacidad suficiente para ${horas}h`,\n    });\n\n    continue;\n  }\n\n  candidatos.sort((a, b) => b.score - a.score);\n\n  const elegido = candidatos[0];\n  const persona = elegido.persona;\n\n  persona.horas_asignadas += horas;\n  persona.tareas.push(tarea.tarea_id);\n\n  const proyecto = proyectoById[tarea.proyecto_id] || {};\n\n  asignaciones.push({\n    tarea_id: tarea.tarea_id,\n    tarea: tarea.nombre,\n    proyecto_id: tarea.proyecto_id,\n    proyecto: tarea.proyecto_nombre || proyecto.nombre || '',\n    cliente: tarea.cliente || proyecto.cliente || '',\n    persona_id: persona.persona_id,\n    persona: persona.nombre,\n    rol: persona.rol,\n    seniority: persona.seniority,\n    estado_asignacion: 'asignada',\n    horas_estimadas: horas,\n    deadline: tarea.deadline,\n    prioridad: tarea.prioridad,\n    skills_requeridas: asArray(tarea.skills_requeridas).join(', '),\n    skills_match: elegido.matched.join(', '),\n    score_asignacion: elegido.score,\n    motivo: elegido.esPreferida\n      ? 'Asignada a persona preferida viable'\n      : 'Asignada por mejor encaje skills/capacidad',\n  });\n\n  if (elegido.missing.length > 0) {\n    advertencias.push({\n      tipo: 'SKILLS_INCOMPLETAS',\n      tarea_id: tarea.tarea_id,\n      tarea: tarea.nombre,\n      persona: persona.nombre,\n      detalle: `Faltan skills: ${elegido.missing.join(', ')}`,\n    });\n  }\n}\n\nconst resumenPersonas = personas.map(p => {\n  const capacidad = Number(p.capacidad_horas_semana || 0);\n  const asignado = Number(p.horas_asignadas || 0);\n\n  if (asignado > capacidad) {\n    advertencias.push({\n      tipo: 'SOBRECARGA_PERSONA',\n      persona_id: p.persona_id,\n      persona: p.nombre,\n      capacidad,\n      asignado,\n      exceso: asignado - capacidad,\n    });\n  }\n\n  return {\n    persona_id: p.persona_id,\n    nombre: p.nombre,\n    rol: p.rol,\n    capacidad_horas_semana: capacidad,\n    horas_asignadas: asignado,\n    horas_libres: capacidad - asignado,\n    porcentaje_ocupacion: capacidad > 0 ? Math.round((asignado / capacidad) * 100) : 0,\n    num_tareas: p.tareas.length,\n    tareas: p.tareas.join(', '),\n  };\n});\n\nconst resumenProyectos = proyectos.map(proyecto => {\n  const tareasProyecto = tareas.filter(t => t.proyecto_id === proyecto.proyecto_id);\n  const asignadasProyecto = asignaciones.filter(\n    a => a.proyecto_id === proyecto.proyecto_id && a.estado_asignacion === 'asignada'\n  );\n\n  return {\n    proyecto_id: proyecto.proyecto_id,\n    nombre: proyecto.nombre,\n    cliente: proyecto.cliente,\n    prioridad: proyecto.prioridad,\n    deadline: proyecto.deadline,\n    total_tareas: tareasProyecto.length,\n    tareas_asignadas: asignadasProyecto.length,\n    tareas_sin_asignar: tareasProyecto.length - asignadasProyecto.length,\n    horas_asignadas: asignadasProyecto.reduce((sum, a) => sum + Number(a.horas_estimadas || 0), 0),\n  };\n});\n\nconst resumen = {\n  total_tareas: tareas.length,\n  tareas_asignadas: asignaciones.filter(a => a.estado_asignacion === 'asignada').length,\n  tareas_sin_asignar: asignaciones.filter(a => a.estado_asignacion === 'sin_asignar').length,\n  total_advertencias: advertencias.length,\n  horas_totales_asignadas: asignaciones.reduce((sum, a) => {\n    if (a.estado_asignacion !== 'asignada') return sum;\n    return sum + Number(a.horas_estimadas || 0);\n  }, 0),\n  capacidad_total: personas.reduce((sum, p) => sum + Number(p.capacidad_horas_semana || 0), 0),\n};\n\nreturn [\n  {\n    json: {\n      periodo: PERIODO,\n      asignaciones,\n      resumen_personas: resumenPersonas,\n      resumen_proyectos: resumenProyectos,\n      advertencias,\n      resumen,\n      input_original: data,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "7e57edaf-e150-4891-ac84-b82ed8a680ad",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst data = Array.isArray(input) ? input[0] : input;\n\nconst now = new Date();\n\nconst periodo = data.periodo || 'periodo_sin_nombre';\nconst asignaciones = data.asignaciones || [];\nconst resumenPersonas = data.resumen_personas || [];\nconst resumenProyectos = data.resumen_proyectos || [];\nconst advertencias = data.advertencias || [];\nconst resumen = data.resumen || {};\n\nfunction row(seccion, c1 = '', c2 = '', c3 = '', c4 = '', c5 = '', c6 = '', c7 = '', c8 = '') {\n  return {\n    periodo,\n    created_at: now.toISOString(),\n    seccion,\n    col_1: c1,\n    col_2: c2,\n    col_3: c3,\n    col_4: c4,\n    col_5: c5,\n    col_6: c6,\n    col_7: c7,\n    col_8: c8,\n  };\n}\n\nconst rows = [];\n\n// =====================\n// RESUMEN GENERAL\n// =====================\n\nrows.push(row('titulo', 'INFORME ASIGNACIÓN PROYECTOS'));\nrows.push(row('metadata', 'periodo', periodo));\nrows.push(row('metadata', 'created_at', now.toISOString()));\nrows.push(row(''));\n\nrows.push(row('resumen_general', 'RESUMEN GENERAL'));\nrows.push(row('resumen_general', 'total tareas', resumen.total_tareas ?? asignaciones.length));\nrows.push(row('resumen_general', 'tareas asignadas', resumen.tareas_asignadas ?? asignaciones.filter(a => a.estado_asignacion === 'asignada').length));\nrows.push(row('resumen_general', 'tareas sin asignar', resumen.tareas_sin_asignar ?? asignaciones.filter(a => a.estado_asignacion === 'sin_asignar').length));\nrows.push(row('resumen_general', 'horas asignadas', resumen.horas_totales_asignadas ?? ''));\nrows.push(row('resumen_general', 'capacidad total', resumen.capacidad_total ?? ''));\nrows.push(row('resumen_general', 'advertencias', resumen.total_advertencias ?? advertencias.length));\nrows.push(row(''));\n\n// =====================\n// ASIGNACIONES\n// =====================\n\nrows.push(row('asignaciones', 'ASIGNACIONES'));\nrows.push(row(\n  'asignaciones',\n  'tarea_id',\n  'tarea',\n  'proyecto',\n  'persona',\n  'horas',\n  'deadline',\n  'skills match',\n  'motivo'\n));\n\nfor (const a of asignaciones.filter(x => x.estado_asignacion === 'asignada')) {\n  rows.push(row(\n    'asignaciones',\n    a.tarea_id || '',\n    a.tarea || '',\n    a.proyecto || '',\n    a.persona || '',\n    a.horas_estimadas ?? '',\n    a.deadline || '',\n    a.skills_match || '',\n    a.motivo || ''\n  ));\n}\n\nrows.push(row(''));\n\n// =====================\n// TAREAS SIN ASIGNAR\n// =====================\n\nrows.push(row('sin_asignar', 'TAREAS SIN ASIGNAR'));\nrows.push(row(\n  'sin_asignar',\n  'tarea_id',\n  'tarea',\n  'proyecto',\n  'horas',\n  'deadline',\n  'prioridad',\n  'skills requeridas',\n  'motivo'\n));\n\nfor (const a of asignaciones.filter(x => x.estado_asignacion === 'sin_asignar')) {\n  rows.push(row(\n    'sin_asignar',\n    a.tarea_id || '',\n    a.tarea || '',\n    a.proyecto || '',\n    a.horas_estimadas ?? '',\n    a.deadline || '',\n    a.prioridad ?? '',\n    a.skills_requeridas || '',\n    a.motivo || ''\n  ));\n}\n\nrows.push(row(''));\n\n// =====================\n// CARGA POR PERSONA\n// =====================\n\nrows.push(row('personas', 'CARGA POR PERSONA'));\nrows.push(row(\n  'personas',\n  'persona',\n  'rol',\n  'capacidad',\n  'horas asignadas',\n  'horas libres',\n  '% ocupación',\n  'nº tareas',\n  'tareas'\n));\n\nfor (const p of resumenPersonas) {\n  rows.push(row(\n    'personas',\n    p.nombre || '',\n    p.rol || '',\n    p.capacidad_horas_semana ?? '',\n    p.horas_asignadas ?? '',\n    p.horas_libres ?? '',\n    p.porcentaje_ocupacion ?? '',\n    p.num_tareas ?? '',\n    p.tareas || ''\n  ));\n}\n\nrows.push(row(''));\n\n// =====================\n// RESUMEN POR PROYECTO\n// =====================\n\nrows.push(row('proyectos', 'RESUMEN POR PROYECTO'));\nrows.push(row(\n  'proyectos',\n  'proyecto',\n  'cliente',\n  'prioridad',\n  'deadline',\n  'total tareas',\n  'asignadas',\n  'sin asignar',\n  'horas asignadas'\n));\n\nfor (const p of resumenProyectos) {\n  rows.push(row(\n    'proyectos',\n    p.nombre || '',\n    p.cliente || '',\n    p.prioridad ?? '',\n    p.deadline || '',\n    p.total_tareas ?? '',\n    p.tareas_asignadas ?? '',\n    p.tareas_sin_asignar ?? '',\n    p.horas_asignadas ?? ''\n  ));\n}\n\nrows.push(row(''));\n\n// =====================\n// ADVERTENCIAS\n// =====================\n\nrows.push(row('advertencias', 'ADVERTENCIAS'));\nrows.push(row(\n  'advertencias',\n  'tipo',\n  'tarea_id/persona_id',\n  'tarea/persona',\n  'detalle',\n  '',\n  '',\n  '',\n  ''\n));\n\nfor (const a of advertencias) {\n  rows.push(row(\n    'advertencias',\n    a.tipo || '',\n    a.tarea_id || a.persona_id || '',\n    a.tarea || a.persona || '',\n    a.detalle || `Capacidad ${a.capacidad ?? ''}, asignado ${a.asignado ?? ''}, exceso ${a.exceso ?? ''}`,\n    '',\n    '',\n    '',\n    ''\n  ));\n}\n\nrows.push(row(''));\n\n// =====================\n// RECOMENDACIONES\n// =====================\n\nconst tareasSinAsignar = asignaciones.filter(a => a.estado_asignacion === 'sin_asignar');\nconst personasConHueco = resumenPersonas.filter(p => Number(p.horas_libres || 0) > 0);\n\nrows.push(row('recomendaciones', 'RECOMENDACIONES'));\n\nif (tareasSinAsignar.length > 0) {\n  rows.push(row(\n    'recomendaciones',\n    'Hay tareas sin asignar',\n    `${tareasSinAsignar.length} tareas no caben con la capacidad individual actual`\n  ));\n\n  rows.push(row(\n    'recomendaciones',\n    'Dividir tareas grandes',\n    'Partir tareas de 14h o más en subtareas pequeñas para aprovechar huecos libres'\n  ));\n\n  rows.push(row(\n    'recomendaciones',\n    'Permitir sobrecarga controlada',\n    'Añadir una opción de tolerancia, por ejemplo +10% o +20% de capacidad'\n  ));\n\n  rows.push(row(\n    'recomendaciones',\n    'Revisar skills incompletas',\n    'Algunas asignaciones son viables por capacidad pero no cubren todas las skills'\n  ));\n} else {\n  rows.push(row(\n    'recomendaciones',\n    'Asignación completa',\n    'Todas las tareas han sido asignadas'\n  ));\n}\n\nif (personasConHueco.length > 0) {\n  rows.push(row(\n    'recomendaciones',\n    'Capacidad libre disponible',\n    personasConHueco.map(p => `${p.nombre}: ${p.horas_libres}h`).join(', ')\n  ));\n}\n\nrows.push(row(''));\n\n// =====================\n// JSON ORIGINAL\n// =====================\n\nrows.push(row('json', 'JSON RESULTADO'));\nrows.push(row('json', 'json_resultado', JSON.stringify(data)));\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "621b492f-313f-41d0-ab03-6da97faf4428",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "documentId": {
+          "__rl": true,
+          "value": "1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM",
+          "mode": "list",
+          "cachedResultName": "gestor_proyectos_software",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit?usp=drivesdk"
+        },
+        "title": "={{$json.periodo}}_proyectos_{{$now.format('yyyy-MM-dd_HHmm')}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        336
+      ],
+      "id": "d879e155-b18a-4781-b587-352fb4fd9832",
+      "name": "Create sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{$json.spreadsheetId}}/values/{{$json.title}}!A1:H1?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"values\": [\n    [\"col_1\", \"col_2\", \"col_3\", \"col_4\", \"col_5\", \"col_6\", \"col_7\", \"col_8\"]\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        336
+      ],
+      "id": "d7b04c51-4755-49ae-a43e-0cb27c33ee52",
+      "name": "HTTP Request",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1744,
+        16
+      ],
+      "id": "a67f5867-b4a7-424c-9d31-8af52e3be6a5",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM",
+          "mode": "list",
+          "cachedResultName": "gestor_proyectos_software",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1y7Iwz40Z4pEapGLCSg7_BUHbUiist17-8ved8J7DMzM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{$json.periodo}}_proyectos_{{$now.format('yyyy-MM-dd_HHmm')}}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "col_1": "={{ $json.col_1 }}",
+            "col_2": "={{ $json.col_2 }}",
+            "col_3": "={{ $json.col_3 }}",
+            "col_4": "={{ $json.col_4 }}",
+            "col_5": "={{ $json.col_5 }}",
+            "col_6": "={{ $json.col_6 }}",
+            "col_7": "={{ $json.col_7 }}",
+            "col_8": "={{ $json.col_8 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "col_1",
+              "displayName": "col_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_2",
+              "displayName": "col_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_3",
+              "displayName": "col_3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_4",
+              "displayName": "col_4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_5",
+              "displayName": "col_5",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_6",
+              "displayName": "col_6",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_7",
+              "displayName": "col_7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_8",
+              "displayName": "col_8",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1952,
+        16
+      ],
+      "id": "de525c12-e96c-468c-a47e-14b7b621860c",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Leer Equipo",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Proyectos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Tareas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Proyectos": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Leer Equipo": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Tareas": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Create sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c4ec5d7a-8e0e-4308-a90c-2a8c5b25fa90",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
+  },
+  "id": "B2AoG6ESlCKGxVnT",
+  "tags": []
+}
