@@ -1,0 +1,566 @@
+{
+  "name": "03_generar_guardias sin IA +Time",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        0
+      ],
+      "id": "c5ee24a3-c88d-44ce-ae20-d57564927408",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
+          "mode": "list",
+          "cachedResultName": "Guardias Hospital",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1330408410,
+          "mode": "list",
+          "cachedResultName": "Disponibilidades_guardias",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit#gid=1330408410"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -720,
+        -224
+      ],
+      "id": "33957020-d240-4c84-b802-b21da665ae0d",
+      "name": "Read Disponibilidades_guardias",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "12cetWCOgQpw4OBWL_3ncRsgMuH0b7cdqMkMJO5rE1tU",
+          "mode": "list",
+          "cachedResultName": "Calendario Guardias-Intervencionisno Código Ictus 2026",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12cetWCOgQpw4OBWL_3ncRsgMuH0b7cdqMkMJO5rE1tU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1147318050,
+          "mode": "list",
+          "cachedResultName": "calendario_guardias_normalizado",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12cetWCOgQpw4OBWL_3ncRsgMuH0b7cdqMkMJO5rE1tU/edit#gid=1147318050"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -720,
+        160
+      ],
+      "id": "e937310c-cead-4c3f-a89a-96a07b957595",
+      "name": "Read Disponibilidades_guardias1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -304,
+        -48
+      ],
+      "id": "e9f1c01c-beaf-4618-b0c5-65be4eb466d8",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "function clean(value) {\n  return String(value ?? \"\").trim();\n}\n\nfunction toNumber(value) {\n  const n = Number(String(value ?? \"\").replace(\",\", \".\"));\n  return Number.isNaN(n) ? 0 : n;\n}\n\nfunction normalizeDate(value) {\n  const v = clean(value);\n  if (!v) return \"\";\n\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(v)) return v;\n\n  if (/^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(v)) {\n    const [d, m, y] = v.split(\"/\");\n    return `${y}-${m}-${d}`;\n  }\n\n  return v;\n}\n\nfunction parseListaFechas(value) {\n  const v = clean(value);\n  if (!v) return [];\n\n  return v\n    .split(/[,;\\n]/)\n    .map(x => normalizeDate(x))\n    .filter(Boolean);\n}\n\nreturn items.map(item => {\n  const d = item.json;\n\n  return {\n    json: {\n      tipo_item: \"medico_disponibilidad\",\n\n      periodo: clean(d[\"Periodo\"]),\n      clave_disponibilidad: clean(d[\"Clave disponibilidad\"]),\n\n      medico_id: clean(d.medico_id),\n      nombre_medico: clean(d.nombre_medico),\n      email_medico: clean(d.email_medico || d.remitente_mail).toLowerCase(),\n\n      no_puedo: parseListaFechas(d.no_puedo),\n      preferiria_librar: parseListaFechas(d.preferiria_librar),\n      prefiere_guardia: parseListaFechas(d.prefiere_guardia),\n      dobletes: parseListaFechas(d.dobletes),\n\n      rotacion: clean(d.rotacion),\n      rotacion_externa: clean(d.rotacion_externa).toLowerCase(),\n      restricciones: clean(d.restricciones),\n      anio_residencia: clean(d.anio_residencia),\n      objetivo_guardias: toNumber(d.objetivo_guardias),\n      observaciones: clean(d.observaciones),\n\n      origen_extraccion: clean(d.origen_extraccion),\n      num_correos_agrupados: toNumber(d.num_correos_agrupados),\n      messageIds: clean(d.messageIds),\n      fecha_ultimo_correo: clean(d.fecha_ultimo_correo),\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        -224
+      ],
+      "id": "a9ec9a76-b524-49f6-b264-e110c99aaab7",
+      "name": "Code limpiar disponibilidades"
+    },
+    {
+      "parameters": {
+        "jsCode": "function pad(n) {\n  return String(n).padStart(2, \"0\");\n}\n\nfunction parseBool(value) {\n  if (typeof value === \"boolean\") return value;\n  const v = String(value || \"\").toLowerCase().trim();\n  return v === \"true\" || v === \"verdadero\" || v === \"sí\" || v === \"si\";\n}\n\nfunction toISODate(date) {\n  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;\n}\n\nfunction addDays(date, days) {\n  const d = new Date(date.getTime());\n  d.setDate(d.getDate() + days);\n  return d;\n}\n\nconst salida = [];\n\nfor (const item of items) {\n  const limpio = {};\n\n  for (const [key, value] of Object.entries(item.json)) {\n    limpio[String(key).trim()] = value;\n  }\n\n  const fechaRaw = String(limpio.Fecha || limpio.fecha || \"\").trim();\n\n  if (!fechaRaw) continue;\n\n  let fechaInicio;\n\n  // Formato tipo 1/6/2026\n  if (/^\\d{1,2}\\/\\d{1,2}\\/\\d{4}$/.test(fechaRaw)) {\n    const [dia, mes, anio] = fechaRaw.split(\"/\").map(Number);\n    fechaInicio = new Date(anio, mes - 1, dia);\n  }\n  // Formato tipo 2026-06-01\n  else if (/^\\d{4}-\\d{2}-\\d{2}$/.test(fechaRaw)) {\n    const [anio, mes, dia] = fechaRaw.split(\"-\").map(Number);\n    fechaInicio = new Date(anio, mes - 1, dia);\n  } else {\n    continue;\n  }\n\n  const semana = limpio.Semana || limpio.semana;\n  const numGuardias = Number(limpio.Num_guardias ?? limpio.num_guardias ?? 1);\n  const dobleResidente = parseBool(limpio.Doble_residente ?? limpio.doble_residente);\n\n  // Expandimos la semana completa: lunes a domingo\n  for (let i = 0; i < 7; i++) {\n    const fechaDia = addDays(fechaInicio, i);\n    const iso = toISODate(fechaDia);\n\n    // Nos quedamos solo con junio 2026\n    if (!iso.startsWith(\"2026-06-\")) continue;\n\n    salida.push({\n      json: {\n        tipo_item: \"guardia_necesaria\",\n        semana,\n        fecha: iso,\n        num_guardias: numGuardias,\n        doble_residente: dobleResidente\n      }\n    });\n  }\n}\n\nreturn salida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        160
+      ],
+      "id": "2991b821-3a01-41b7-9cdb-5684dcd2167d",
+      "name": "Code limpiar guardias"
+    },
+    {
+      "parameters": {
+        "jsCode": "function clean(value) {\n  return String(value ?? \"\").trim();\n}\n\nfunction toNumber(value) {\n  const n = Number(String(value ?? \"\").replace(\",\", \".\"));\n  return Number.isNaN(n) ? 0 : n;\n}\n\nfunction boolLike(value) {\n  if (typeof value === \"boolean\") return value;\n  const v = clean(value).toLowerCase();\n  return v === \"true\" || v === \"verdadero\" || v === \"sí\" || v === \"si\";\n}\n\nfunction includesDate(lista, fecha) {\n  return Array.isArray(lista) && lista.includes(fecha);\n}\n\nfunction getDiaSemana(fecha) {\n  const d = new Date(`${fecha}T00:00:00`);\n  const dias = [\"domingo\", \"lunes\", \"martes\", \"miércoles\", \"jueves\", \"viernes\", \"sábado\"];\n  return dias[d.getDay()];\n}\n\nfunction esFinDeSemana(fecha) {\n  const d = new Date(`${fecha}T00:00:00`);\n  const day = d.getDay();\n  return day === 0 || day === 6;\n}\n\n// Cambia estos nombres si tus nodos se llaman distinto\nconst guardias = $items(\"Code limpiar guardias\").map(item => item.json);\nconst medicos = $items(\"Code limpiar disponibilidades\").map(item => item.json);\n\nconst guardiasValidas = guardias\n  .filter(g => clean(g.fecha) !== \"\")\n  .filter(g => toNumber(g.num_guardias) > 0)\n  .sort((a, b) => clean(a.fecha).localeCompare(clean(b.fecha)));\n\nconst medicosValidos = medicos\n  .filter(m => clean(m.medico_id) !== \"\" || clean(m.email_medico) !== \"\");\n\n// 1. Lista única de médicos, sin repetir toda la disponibilidad en cada guardia\nconst medicosCompactos = medicosValidos.map(m => ({\n  medico_id: clean(m.medico_id),\n  nombre_medico: clean(m.nombre_medico),\n  email_medico: clean(m.email_medico),\n  anio_residencia: clean(m.anio_residencia),\n  rotacion: clean(m.rotacion),\n  rotacion_externa: clean(m.rotacion_externa),\n  objetivo_guardias: toNumber(m.objetivo_guardias),\n  restricciones: clean(m.restricciones),\n  observaciones: clean(m.observaciones),\n  no_puedo: m.no_puedo || [],\n  preferiria_librar: m.preferiria_librar || [],\n  prefiere_guardia: m.prefiere_guardia || [],\n  dobletes: m.dobletes || []\n}));\n\n// 2. Guardias compactas: candidatos solo con id + variables del día\nconst guardiasPreparadas = [];\n\nfor (const g of guardiasValidas) {\n  const fecha = clean(g.fecha);\n\n  const candidatos = [];\n\n  for (const m of medicosValidos) {\n    if (includesDate(m.no_puedo, fecha)) {\n      continue;\n    }\n\n    const prefeririaLibrar = includesDate(m.preferiria_librar, fecha);\n    const prefiereGuardia = includesDate(m.prefiere_guardia, fecha);\n    const aceptaDoblete = includesDate(m.dobletes, fecha);\n\n    let score = 100;\n\n    if (prefeririaLibrar) score -= 25;\n    if (prefiereGuardia) score += 20;\n\n    if (boolLike(g.doble_residente) && clean(m.anio_residencia) === \"R4\") {\n      score += 5;\n    }\n\n    candidatos.push({\n      medico_id: clean(m.medico_id),\n      score_dia: score,\n      preferiria_librar: prefeririaLibrar,\n      prefiere_guardia: prefiereGuardia,\n      acepta_doblete: aceptaDoblete\n    });\n  }\n\n  candidatos.sort((a, b) => b.score_dia - a.score_dia);\n\n  guardiasPreparadas.push({\n    guardia_id: `${fecha}_${clean(g.semana).replace(/\\s+/g, \"_\")}`,\n    fecha,\n    semana: clean(g.semana),\n    dia_semana: getDiaSemana(fecha),\n    es_fin_de_semana: esFinDeSemana(fecha),\n    num_guardias: toNumber(g.num_guardias),\n    doble_residente: boolLike(g.doble_residente),\n    candidatos\n  });\n}\n\nconst totalPuestosGuardia = guardiasPreparadas.reduce(\n  (acc, g) => acc + toNumber(g.num_guardias),\n  0\n);\n\nreturn [\n  {\n    json: {\n      periodo: \"junio_2026\",\n      total_dias_guardia: guardiasPreparadas.length,\n      total_puestos_guardia: totalPuestosGuardia,\n      total_medicos: medicosCompactos.length,\n      medicos: medicosCompactos,\n      guardias: guardiasPreparadas\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -48
+      ],
+      "id": "8d576628-66b2-4e18-b5ff-f8877e176694",
+      "name": "Preparar input asignacion"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolver CSP — Backtracking + Forward Checking + MRV + Branch & Bound\n//\n// CATÁLOGO DE REGLAS DURAS (HARD CONSTRAINTS):\n//   HARD R1: Médico debe estar en candidatos de la guardia.\n//   HARD R2: Médico no puede tener esa fecha en su lista no_puedo.\n//   HARD R3: No repetir médico dentro de la misma guardia (alldifferent).\n//   HARD R4: Días consecutivos prohibidos (distancia = 1) para el mismo médico.\n//   HARD R5: Distancia = 2 prohibida salvo doblete pre-acordado.\n//   HARD R7: En guardias doble_residente, no 2× R2.\n//   HARD R8: R2 no puede ocupar guardias de 1 sola persona (num_guardias === 1).\n//\n// REGLAS BLANDAS:\n//   SOFT R6: objetivo_guardias NO es tope absoluto.\n//\n// VERSIÓN MÁS EFECTIVA OBSERVADA:\n//   - Beam Search activo.\n//   - Beam width = 5.\n//   - LCV fuerte con margen de score = 35.\n//   - MRV + Degree heuristic.\n//   - Forward Checking.\n//   - Branch & Bound.\n//   - Hueco solo si no hay candidatos viables.\n\nconst TIME_LIMIT_MS = 30000;\nconst HUECO_PENALTY = -5000;\n\nconst BONUS_BAJO_OBJETIVO = 25;\nconst BONUS_PRIMERA_GUARDIA = 25;\n\nconst PENALTY_PREFERIRIA_LIBRAR = -80;\nconst PENALTY_FLEX_SOBRECARGA = -15;\n\nconst PENALTY_SOBRE_OBJETIVO = -80;\nconst PENALTY_SOBRE_OBJETIVO_EXTRA = -40;\n\n// ---------- Parámetros experimentales ----------\nconst USE_BEAM_SEARCH = true;\nconst BEAM_WIDTH = 5;\nconst SCORE_TIE_MARGIN_FOR_LCV = 35;\nconst TIMEOUT_CHECK_MASK = 0x1FF;\n\nconst startTime = Date.now();\nconst deadline = startTime + TIME_LIMIT_MS;\n\nconst data = items[0].json;\nconst periodo = data.periodo;\nconst medicos = Array.isArray(data.medicos) ? data.medicos : [];\nconst guardiasInput = Array.isArray(data.guardias) ? data.guardias : [];\n\nif (medicos.length === 0) throw new Error(\"input.medicos está vacío\");\nif (guardiasInput.length === 0) throw new Error(\"input.guardias está vacío\");\n\nconst parseDate = f => new Date(`${f}T00:00:00.000Z`);\nconst absDiff = (a, b) => Math.abs(Math.round((parseDate(b) - parseDate(a)) / 86400000));\n\nconst medicosById = new Map(medicos.map(m => [String(m.medico_id), m]));\nconst guardiasOrd = [...guardiasInput].sort((a, b) => parseDate(a.fecha) - parseDate(b.fecha));\nconst guardiaByFecha = new Map(guardiasOrd.map(g => [g.fecha, g]));\n\nconst anioOf = id => String(medicosById.get(String(id))?.anio_residencia || \"\");\n\n// ---------- Cálculo del objetivo implícito para los flex ----------\nconst totalPuestos = guardiasOrd.reduce((acc, g) => acc + (Number(g.num_guardias) || 0), 0);\n\nconst sumaObjetivosExplicitos = medicos.reduce((acc, m) => {\n  const o = Number(m.objetivo_guardias) || 0;\n  return o > 0 ? acc + o : acc;\n}, 0);\n\nconst numFlex = medicos.filter(m => (Number(m.objetivo_guardias) || 0) === 0).length;\nconst restoParaFlex = Math.max(0, totalPuestos - sumaObjetivosExplicitos);\nconst objetivoImplicito = numFlex > 0 ? restoParaFlex / numFlex : 0;\n\nfunction objetivoEfectivo(medico) {\n  const explicit = Number(medico?.objetivo_guardias) || 0;\n  if (explicit > 0) return explicit;\n  return objetivoImplicito;\n}\n\n// ---------- Construcción de variables y dominios iniciales ----------\nconst variables = [];\n\nfor (const g of guardiasOrd) {\n  const num = Number(g.num_guardias) || 0;\n\n  for (let slot = 0; slot < num; slot++) {\n    let dom = (g.candidatos || [])\n      .map(c => String(c.medico_id))\n      .filter(id => medicosById.has(id))\n      .filter(id => !((medicosById.get(id).no_puedo || []).map(String).includes(g.fecha)));\n\n    if (num === 1) {\n      dom = dom.filter(id => anioOf(id) !== \"R2\");\n    }\n\n    variables.push({\n      key: `${g.guardia_id}__${slot}`,\n      guardia: g,\n      slot,\n      domainOriginal: dom,\n      currentDomain: new Set(dom)\n    });\n  }\n}\n\nfunction getCandidato(guardia, medicoId) {\n  return (guardia.candidatos || []).find(c => String(c.medico_id) === String(medicoId));\n}\n\nfunction aceptaDobleteEntreFechas(medico, fechaA, fechaB) {\n  const set = new Set((medico.dobletes || []).map(String));\n  if (set.has(fechaA) && set.has(fechaB)) return true;\n\n  const gA = guardiaByFecha.get(fechaA);\n  const gB = guardiaByFecha.get(fechaB);\n  const cA = gA ? getCandidato(gA, medico.medico_id) : null;\n  const cB = gB ? getCandidato(gB, medico.medico_id) : null;\n\n  return cA?.acepta_doblete === true && cB?.acepta_doblete === true;\n}\n\nfunction softScore(v, medicoId, contadorActual) {\n  const id = String(medicoId);\n  const candidato = getCandidato(v.guardia, id);\n  const medico = medicosById.get(id);\n  const asignadas = contadorActual.get(id) || 0;\n  const explicit = Number(medico?.objetivo_guardias) || 0;\n  const efTarget = objetivoEfectivo(medico);\n\n  let s = Number(candidato?.score_dia) || 0;\n\n  if (candidato?.prefiere_guardia === true) s += 15;\n  if (candidato?.preferiria_librar === true) s += PENALTY_PREFERIRIA_LIBRAR;\n\n  if (asignadas === 0) {\n    s += BONUS_PRIMERA_GUARDIA;\n  }\n\n  if (asignadas < efTarget) {\n    s += BONUS_BAJO_OBJETIVO;\n  }\n\n  if (efTarget > 0 && asignadas >= efTarget) {\n    const exceso = (asignadas - Math.floor(efTarget)) + 1;\n\n    if (explicit > 0) {\n      s += PENALTY_SOBRE_OBJETIVO;\n      s += PENALTY_SOBRE_OBJETIVO_EXTRA * Math.max(0, exceso - 1);\n    } else {\n      s += PENALTY_FLEX_SOBRECARGA * Math.max(1, exceso);\n    }\n  }\n\n  return s;\n}\n\nfunction newState() {\n  const fechasPorMedico = new Map();\n  const contadorPorMedico = new Map();\n\n  for (const m of medicos) {\n    fechasPorMedico.set(String(m.medico_id), []);\n    contadorPorMedico.set(String(m.medico_id), 0);\n  }\n\n  return { assigned: new Map(), fechasPorMedico, contadorPorMedico };\n}\n\n// ---------- Forward checking ----------\nfunction forwardCheck(state, v, medicoId, unassigned) {\n  const id = String(medicoId);\n  const fecha = v.guardia.fecha;\n  const medico = medicosById.get(id);\n  const removed = [];\n\n  for (const v2 of unassigned) {\n    if (!v2.currentDomain.has(id)) continue;\n\n    let drop = false;\n\n    if (v2.guardia.guardia_id === v.guardia.guardia_id) {\n      drop = true;\n    } else {\n      const d = absDiff(fecha, v2.guardia.fecha);\n\n      if (d === 1) drop = true;\n      else if (d === 2 && !aceptaDobleteEntreFechas(medico, fecha, v2.guardia.fecha)) {\n        drop = true;\n      }\n    }\n\n    if (drop) {\n      v2.currentDomain.delete(id);\n      removed.push(v2);\n    }\n  }\n\n  return { id, removed };\n}\n\nfunction undoForwardCheck(undo) {\n  for (const v2 of undo.removed) v2.currentDomain.add(undo.id);\n}\n\n// ---------- LCV ----------\nfunction futureImpact(state, v, medicoId, unassigned) {\n  const id = String(medicoId);\n  const fecha = v.guardia.fecha;\n  const medico = medicosById.get(id);\n  let impact = 0;\n\n  for (const v2 of unassigned) {\n    if (!v2.currentDomain.has(id)) continue;\n\n    let drop = false;\n\n    if (v2.guardia.guardia_id === v.guardia.guardia_id) {\n      drop = true;\n    } else {\n      const d = absDiff(fecha, v2.guardia.fecha);\n\n      if (d === 1) drop = true;\n      else if (d === 2 && !aceptaDobleteEntreFechas(medico, fecha, v2.guardia.fecha)) {\n        drop = true;\n      }\n    }\n\n    if (drop) impact++;\n  }\n\n  return impact;\n}\n\nfunction upperBound(unassigned, state) {\n  let bound = 0;\n\n  for (const v of unassigned) {\n    let bestS = HUECO_PENALTY;\n\n    for (const id of v.currentDomain) {\n      const s = softScore(v, id, state.contadorPorMedico);\n      if (s > bestS) bestS = s;\n    }\n\n    bound += bestS;\n  }\n\n  return bound;\n}\n\n// ---------- HARD R7: no 2× R2 ----------\nfunction noDosR2PromisingForGuardia(guardia, state) {\n  if (!guardia.doble_residente) return true;\n\n  const ids = [];\n\n  for (let s = 0; s < guardia.num_guardias; s++) {\n    const id = state.assigned.get(`${guardia.guardia_id}__${s}`);\n    if (id !== undefined && id !== null) ids.push(id);\n  }\n\n  const numR2 = ids.map(id => anioOf(id)).filter(a => a === \"R2\").length;\n  return numR2 < 2;\n}\n\nfunction checkNoDosR2Final(guardia, state) {\n  if (!guardia.doble_residente) return true;\n\n  const ids = [];\n\n  for (let s = 0; s < guardia.num_guardias; s++) {\n    const id = state.assigned.get(`${guardia.guardia_id}__${s}`);\n    if (id) ids.push(id);\n  }\n\n  const numR2 = ids.map(id => anioOf(id)).filter(a => a === \"R2\").length;\n  return numR2 < 2;\n}\n\nfunction wouldViolateNoDosR2(v, medicoId, state) {\n  if (!v.guardia.doble_residente) return false;\n  if (anioOf(medicoId) !== \"R2\") return false;\n\n  for (let s = 0; s < v.guardia.num_guardias; s++) {\n    if (s === v.slot) continue;\n\n    const aid = state.assigned.get(`${v.guardia.guardia_id}__${s}`);\n    if (aid && anioOf(aid) === \"R2\") {\n      return true;\n    }\n  }\n\n  return false;\n}\n\nfunction solucionCompleta(state) {\n  for (const g of guardiasOrd) {\n    if (!checkNoDosR2Final(g, state)) return false;\n  }\n\n  return true;\n}\n\n// ---------- MRV + degree heuristic ----------\nfunction pickMRV(unassigned) {\n  let bestVar = null;\n  let bestSize = Infinity;\n  let bestDegree = -Infinity;\n\n  for (const v of unassigned) {\n    const sz = v.currentDomain.size;\n\n    let degree = 0;\n\n    for (const v2 of unassigned) {\n      if (v2 === v) continue;\n\n      if (v2.guardia.guardia_id === v.guardia.guardia_id) {\n        degree += 3;\n      } else {\n        const d = absDiff(v.guardia.fecha, v2.guardia.fecha);\n        if (d === 1) degree += 2;\n        else if (d === 2) degree += 1;\n      }\n    }\n\n    if (sz < bestSize || (sz === bestSize && degree > bestDegree)) {\n      bestSize = sz;\n      bestDegree = degree;\n      bestVar = v;\n      if (sz === 0) return bestVar;\n    }\n  }\n\n  return bestVar;\n}\n\nfunction compareCandidates(a, b, state) {\n  const diffScore = b.score - a.score;\n\n  if (Math.abs(diffScore) > SCORE_TIE_MARGIN_FOR_LCV) {\n    return diffScore;\n  }\n\n  if (a.impact !== b.impact) {\n    return a.impact - b.impact;\n  }\n\n  if (b.score !== a.score) return b.score - a.score;\n\n  const cargaA = state.contadorPorMedico.get(a.id) || 0;\n  const cargaB = state.contadorPorMedico.get(b.id) || 0;\n  if (cargaA !== cargaB) return cargaA - cargaB;\n\n  const medicoA = medicosById.get(a.id);\n  const medicoB = medicosById.get(b.id);\n  const targetA = objetivoEfectivo(medicoA);\n  const targetB = objetivoEfectivo(medicoB);\n  const deficitA = targetA - cargaA;\n  const deficitB = targetB - cargaB;\n\n  return deficitB - deficitA;\n}\n\nconst best = { score: -Infinity, solution: null, iterations: 0, hitTimeout: false };\n\n// ---------- Fallback inicial ----------\n(function fallbackTodoHuecos() {\n  const state = newState();\n\n  for (const v of variables) {\n    state.assigned.set(v.key, null);\n  }\n\n  if (solucionCompleta(state)) {\n    best.score = variables.length * HUECO_PENALTY;\n    best.solution = new Map(state.assigned);\n  }\n})();\n\n// ---------- Greedy baseline ----------\n(function greedyBaseline() {\n  const state = newState();\n  let score = 0;\n\n  for (const v of variables) {\n    const candidatosValidos = [];\n\n    for (const id of v.domainOriginal) {\n      const m = medicosById.get(id);\n\n      let dup = false;\n\n      for (let s = 0; s < v.guardia.num_guardias; s++) {\n        if (s === v.slot) continue;\n\n        if (state.assigned.get(`${v.guardia.guardia_id}__${s}`) === id) {\n          dup = true;\n          break;\n        }\n      }\n\n      if (dup) continue;\n\n      const fechas = state.fechasPorMedico.get(id) || [];\n      let bad = false;\n\n      for (const f of fechas) {\n        const d = absDiff(f, v.guardia.fecha);\n\n        if (d === 1) {\n          bad = true;\n          break;\n        }\n\n        if (d === 2 && !aceptaDobleteEntreFechas(m, f, v.guardia.fecha)) {\n          bad = true;\n          break;\n        }\n      }\n\n      if (bad) continue;\n      if (wouldViolateNoDosR2(v, id, state)) continue;\n\n      candidatosValidos.push({\n        id,\n        score: softScore(v, id, state.contadorPorMedico),\n        impact: 0\n      });\n    }\n\n    candidatosValidos.sort((a, b) => compareCandidates(a, b, state));\n\n    const elegido = candidatosValidos[0];\n\n    if (elegido) {\n      state.assigned.set(v.key, elegido.id);\n      state.fechasPorMedico.get(elegido.id).push(v.guardia.fecha);\n      state.contadorPorMedico.set(\n        elegido.id,\n        (state.contadorPorMedico.get(elegido.id) || 0) + 1\n      );\n      score += elegido.score;\n    } else {\n      state.assigned.set(v.key, null);\n      score += HUECO_PENALTY;\n    }\n  }\n\n  if (solucionCompleta(state) && score > best.score) {\n    best.score = score;\n    best.solution = new Map(state.assigned);\n  }\n})();\n\n// ---------- Backtracking ----------\nfunction solve(unassigned, state, currentScore) {\n  best.iterations++;\n\n  if ((best.iterations & TIMEOUT_CHECK_MASK) === 0 && Date.now() > deadline) {\n    best.hitTimeout = true;\n    return;\n  }\n\n  if (unassigned.size === 0) {\n    if (!solucionCompleta(state)) return;\n\n    if (currentScore > best.score) {\n      best.score = currentScore;\n      best.solution = new Map(state.assigned);\n    }\n\n    return;\n  }\n\n  const ub = currentScore + upperBound(unassigned, state);\n  if (ub <= best.score) return;\n\n  const v = pickMRV(unassigned);\n  unassigned.delete(v);\n\n  let candidates = [...v.currentDomain]\n    .filter(id => !wouldViolateNoDosR2(v, id, state))\n    .map(id => ({\n      id,\n      score: softScore(v, id, state.contadorPorMedico),\n      impact: futureImpact(state, v, id, unassigned)\n    }))\n    .sort((a, b) => compareCandidates(a, b, state));\n\n  const totalCandidates = candidates.length;\n\n  if (USE_BEAM_SEARCH && candidates.length > BEAM_WIDTH) {\n    candidates = candidates.slice(0, BEAM_WIDTH);\n  }\n\n  for (const { id, score } of candidates) {\n    state.assigned.set(v.key, id);\n    state.fechasPorMedico.get(id).push(v.guardia.fecha);\n\n    const prev = state.contadorPorMedico.get(id) || 0;\n    state.contadorPorMedico.set(id, prev + 1);\n\n    const promising = noDosR2PromisingForGuardia(v.guardia, state);\n\n    if (promising) {\n      const undo = forwardCheck(state, v, id, unassigned);\n      solve(unassigned, state, currentScore + score);\n      undoForwardCheck(undo);\n    }\n\n    state.assigned.delete(v.key);\n\n    const arr = state.fechasPorMedico.get(id);\n    arr.splice(arr.lastIndexOf(v.guardia.fecha), 1);\n\n    state.contadorPorMedico.set(id, prev);\n\n    if (best.hitTimeout) {\n      unassigned.add(v);\n      return;\n    }\n  }\n\n  if (totalCandidates === 0) {\n    state.assigned.set(v.key, null);\n\n    if (noDosR2PromisingForGuardia(v.guardia, state)) {\n      solve(unassigned, state, currentScore + HUECO_PENALTY);\n    }\n\n    state.assigned.delete(v.key);\n  }\n\n  unassigned.add(v);\n}\n\nconst unassigned = new Set(variables);\nsolve(unassigned, newState(), 0);\n\nif (!best.solution) {\n  throw new Error(\"No se encontró ninguna solución que cumpla las restricciones duras.\");\n}\n\n// ---------- Salida ----------\nconst asignacionesPorGuardia = new Map();\n\nfor (const g of guardiasOrd) {\n  asignacionesPorGuardia.set(String(g.guardia_id), {\n    guardia_id: String(g.guardia_id),\n    fecha: g.fecha,\n    medico_ids: []\n  });\n}\n\nfor (const v of variables) {\n  const id = best.solution.get(v.key);\n\n  if (id) {\n    asignacionesPorGuardia.get(String(v.guardia.guardia_id)).medico_ids.push(id);\n  }\n}\n\nconst asignaciones = [...asignacionesPorGuardia.values()];\n\nconst totalPuestosNecesarios = totalPuestos;\n\nconst totalPuestosCubiertos = asignaciones.reduce(\n  (acc, a) => acc + a.medico_ids.length,\n  0\n);\n\nconst totalHuecos = totalPuestosNecesarios - totalPuestosCubiertos;\n\nconst resumenMedicos = medicos.map(m => {\n  const id = String(m.medico_id);\n\n  const fechas = asignaciones\n    .filter(a => a.medico_ids.includes(id))\n    .map(a => a.fecha)\n    .sort();\n\n  const explicit = Number(m.objetivo_guardias) || 0;\n  const efectivo = explicit > 0 ? explicit : objetivoImplicito;\n\n  return {\n    medico_id: id,\n    nombre_medico: m.nombre_medico,\n    email_medico: m.email_medico,\n    anio_residencia: m.anio_residencia,\n    objetivo_explicito: explicit,\n    objetivo_efectivo: Math.round(efectivo * 10) / 10,\n    es_flex: explicit === 0,\n    num_guardias_asignadas: fechas.length,\n    diferencia_vs_objetivo: Math.round((fechas.length - efectivo) * 10) / 10,\n    fechas_asignadas: fechas\n  };\n});\n\nreturn [{\n  json: {\n    periodo,\n    calendario: { periodo, asignaciones },\n    resumen_medicos: resumenMedicos,\n    total_puestos_necesarios: totalPuestosNecesarios,\n    total_puestos_cubiertos: totalPuestosCubiertos,\n    total_huecos: totalHuecos,\n    score_total: best.score,\n    objetivo_implicito_flex: Math.round(objetivoImplicito * 100) / 100,\n    suma_objetivos_explicitos: sumaObjetivosExplicitos,\n    num_medicos_flex: numFlex,\n    stats: {\n      iteraciones: best.iterations,\n      tiempo_ms: Date.now() - startTime,\n      hit_timeout: best.hitTimeout,\n      time_limit_ms: TIME_LIMIT_MS,\n      experimental: true,\n      beam_search: USE_BEAM_SEARCH,\n      beam_width: BEAM_WIDTH,\n      score_tie_margin_for_lcv: SCORE_TIE_MARGIN_FOR_LCV,\n      heuristicas: [\n        \"FallbackTodoHuecos\",\n        \"GreedyNoDosR2Aware\",\n        \"MRV\",\n        \"DegreeHeuristic\",\n        \"ForwardChecking\",\n        \"BranchAndBound\",\n        \"NoDosR2IncrementalPrune\",\n        \"LCV_LeastConstrainingValue\",\n        \"BeamSearchOpcional\",\n        \"TieBreakMenorCarga\",\n        \"BonusPrimeraGuardia\",\n        \"TimeoutCheckFrecuente\",\n        \"HuecoSoloSinCandidatos\"\n      ],\n      pesos: {\n        hueco_penalty: HUECO_PENALTY,\n        bonus_bajo_objetivo: BONUS_BAJO_OBJETIVO,\n        bonus_primera_guardia: BONUS_PRIMERA_GUARDIA,\n        penalty_preferiria_librar: PENALTY_PREFERIRIA_LIBRAR,\n        penalty_flex_sobrecarga: PENALTY_FLEX_SOBRECARGA,\n        penalty_sobre_objetivo: PENALTY_SOBRE_OBJETIVO,\n        penalty_sobre_objetivo_extra: PENALTY_SOBRE_OBJETIVO_EXTRA\n      },\n      reglas_duras: [\n        \"R1_candidatos\",\n        \"R2_no_puedo\",\n        \"R3_no_repetir\",\n        \"R4_consecutivos\",\n        \"R5_distancia2\",\n        \"R7_no_2_R2_en_doble_residente\",\n        \"R8_R2_no_unipersonal\"\n      ],\n      reglas_blandas: [\n        \"R6_objetivo_guardias_como_referencia_no_tope\",\n        \"Penalizacion_progresiva_por_superar_objetivo\",\n        \"Bonus_primera_guardia_para_evitar_ceros\",\n        \"Tie_break_por_menor_carga\",\n        \"Hueco_solo_si_no_hay_candidatos_viables\"\n      ]\n    },\n    input_original: { periodo, medicos, guardias: guardiasOrd }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -48
+      ],
+      "id": "c5d2e5a6-d884-4866-bdab-385458c789a8",
+      "name": "Resolver CSP",
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validador final — verificación defensiva sobre la salida del solver.\n// Recorre el calendario y comprueba que no haya violaciones de restricciones duras.\n// Lo normal es que no encuentre nada (el solver ya las cumple por construcción),\n// pero deja constancia explícita para depuración y auditoría.\n//\n// IMPORTANTE:\n// objetivo_guardias NO es un tope duro.\n// Si un médico supera su objetivo, se registra como advertencia soft, no como violación hard.\n//\n// HARD R7 ACTUALIZADA:\n// En guardias doble_residente, solo está prohibido tener 2 o más R2.\n// Un R2 puede ir con R3 o con R4. Eso NO es violación.\n\nconst data = items[0].json;\nconst input = data.input_original;\nconst calendario = data.calendario;\n\nconst parseDate = f => new Date(`${f}T00:00:00.000Z`);\nconst absDiff = (a, b) => Math.abs(Math.round((parseDate(b) - parseDate(a)) / 86400000));\n\nconst medicosById = new Map((input.medicos || []).map(m => [String(m.medico_id), m]));\nconst guardiasById = new Map((input.guardias || []).map(g => [String(g.guardia_id), g]));\n\nfunction getCandidato(guardia, medicoId) {\n  return (guardia.candidatos || []).find(c => String(c.medico_id) === String(medicoId));\n}\n\nfunction aceptaDobleteEntreFechas(medico, fechaA, fechaB) {\n  const set = new Set((medico.dobletes || []).map(String));\n  if (set.has(fechaA) && set.has(fechaB)) return true;\n\n  const gA = (input.guardias || []).find(g => g.fecha === fechaA);\n  const gB = (input.guardias || []).find(g => g.fecha === fechaB);\n  const cA = gA ? getCandidato(gA, medico.medico_id) : null;\n  const cB = gB ? getCandidato(gB, medico.medico_id) : null;\n\n  return cA?.acepta_doblete === true && cB?.acepta_doblete === true;\n}\n\nconst violaciones_hard = [];\nconst advertencias_soft = [];\n\nconst fechasPorMedico = new Map();\n\nfor (const a of (calendario.asignaciones || [])) {\n  const guardia = guardiasById.get(String(a.guardia_id));\n\n  if (!guardia) {\n    violaciones_hard.push({\n      tipo: \"GUARDIA_NO_EXISTE\",\n      guardia_id: a.guardia_id\n    });\n    continue;\n  }\n\n  const ids = (a.medico_ids || []).map(String);\n  const puestosEsperados = Number(guardia.num_guardias) || 0;\n\n  // Cobertura exacta: si hay menos médicos que puestos, es advertencia soft\n  // porque el solver permite huecos para garantizar salida válida.\n  if (ids.length !== puestosEsperados) {\n    advertencias_soft.push({\n      tipo: \"COBERTURA_NO_EXACTA\",\n      guardia_id: a.guardia_id,\n      fecha: guardia.fecha,\n      esperadas: puestosEsperados,\n      asignadas: ids.length,\n      huecos: Math.max(0, puestosEsperados - ids.length),\n      exceso: Math.max(0, ids.length - puestosEsperados)\n    });\n  }\n\n  if (new Set(ids).size !== ids.length) {\n    violaciones_hard.push({\n      tipo: \"MEDICO_REPETIDO_EN_GUARDIA\",\n      guardia_id: a.guardia_id,\n      fecha: guardia.fecha\n    });\n  }\n\n  for (const id of ids) {\n    const medico = medicosById.get(id);\n\n    if (!medico) {\n      violaciones_hard.push({\n        tipo: \"MEDICO_NO_EXISTE\",\n        guardia_id: a.guardia_id,\n        medico_id: id\n      });\n      continue;\n    }\n\n    if (!getCandidato(guardia, id)) {\n      violaciones_hard.push({\n        tipo: \"MEDICO_FUERA_DE_CANDIDATOS\",\n        guardia_id: a.guardia_id,\n        fecha: guardia.fecha,\n        medico_id: id\n      });\n    }\n\n    if ((medico.no_puedo || []).map(String).includes(guardia.fecha)) {\n      violaciones_hard.push({\n        tipo: \"MEDICO_EN_NO_PUEDO\",\n        guardia_id: a.guardia_id,\n        fecha: guardia.fecha,\n        medico_id: id\n      });\n    }\n\n    if (!fechasPorMedico.has(id)) fechasPorMedico.set(id, []);\n    fechasPorMedico.get(id).push(guardia.fecha);\n  }\n\n  // HARD R7: en guardias doble_residente, solo se prohíbe 2× R2.\n  // Un R2 con R3 o R4 está permitido.\n  if (guardia.doble_residente && ids.length >= 2) {\n    const anios = ids.map(id => String(medicosById.get(id)?.anio_residencia || \"\"));\n    const numR2 = anios.filter(a => a === \"R2\").length;\n\n    if (numR2 >= 2) {\n      violaciones_hard.push({\n        tipo: \"DOBLE_R2_EN_DOBLE_RESIDENTE\",\n        guardia_id: a.guardia_id,\n        fecha: guardia.fecha,\n        medico_ids: ids,\n        anios\n      });\n    }\n  }\n}\n\nfor (const [id, fechasOrig] of fechasPorMedico.entries()) {\n  const medico = medicosById.get(id);\n  const fechas = [...fechasOrig].sort();\n\n  for (let i = 0; i < fechas.length - 1; i++) {\n    const d = absDiff(fechas[i], fechas[i + 1]);\n\n    if (d === 1) {\n      violaciones_hard.push({\n        tipo: \"DIAS_CONSECUTIVOS\",\n        medico_id: id,\n        nombre_medico: medico?.nombre_medico || \"\",\n        fechas: [fechas[i], fechas[i + 1]]\n      });\n    }\n\n    if (d === 2 && !aceptaDobleteEntreFechas(medico || {}, fechas[i], fechas[i + 1])) {\n      violaciones_hard.push({\n        tipo: \"DOBLETE_NO_PERMITIDO\",\n        medico_id: id,\n        nombre_medico: medico?.nombre_medico || \"\",\n        fechas: [fechas[i], fechas[i + 1]]\n      });\n    }\n  }\n\n  const obj = Number(medico?.objetivo_guardias) || 0;\n\n  if (obj > 0 && fechas.length > obj) {\n    advertencias_soft.push({\n      tipo: \"MEDICO_SOBRE_OBJETIVO\",\n      medico_id: id,\n      nombre_medico: medico?.nombre_medico || \"\",\n      objetivo: obj,\n      asignadas: fechas.length,\n      exceso: fechas.length - obj\n    });\n  }\n}\n\nfor (const m of (input.medicos || [])) {\n  const id = String(m.medico_id);\n  const fechas = fechasPorMedico.get(id) || [];\n  const obj = Number(m.objetivo_guardias) || 0;\n\n  if (obj > 0 && fechas.length < obj) {\n    advertencias_soft.push({\n      tipo: \"MEDICO_BAJO_OBJETIVO\",\n      medico_id: id,\n      nombre_medico: m.nombre_medico,\n      objetivo: obj,\n      asignadas: fechas.length,\n      deficit: obj - fechas.length\n    });\n  }\n\n  for (const fechaPref of (m.preferiria_librar || [])) {\n    if (fechas.includes(fechaPref)) {\n      advertencias_soft.push({\n        tipo: \"ASIGNADO_EN_PREFERIRIA_LIBRAR\",\n        medico_id: id,\n        nombre_medico: m.nombre_medico,\n        fecha: fechaPref\n      });\n    }\n  }\n}\n\nreturn [{\n  json: {\n    ...data,\n    validacion: {\n      valido_hard: violaciones_hard.length === 0,\n      total_violaciones_hard: violaciones_hard.length,\n      total_advertencias_soft: advertencias_soft.length,\n      violaciones_hard,\n      advertencias_soft\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        -48
+      ],
+      "id": "4eec62d7-a37c-4d37-b183-811f483ba8b0",
+      "name": "Validador final"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generador determinista de informe Markdown.\n// Sustituye al nodo Gemini.\n// Usa SOLO datos ya calculados y validados.\n\nconst data = items[0].json;\n\nconst periodo = data.periodo || data.calendario?.periodo || \"\";\nconst calendario = data.calendario || {};\nconst asignaciones = Array.isArray(calendario.asignaciones) ? calendario.asignaciones : [];\nconst resumenMedicos = Array.isArray(data.resumen_medicos) ? data.resumen_medicos : [];\nconst validacion = data.validacion || {};\nconst stats = data.stats || {};\n\nconst input = data.input_original || {};\nconst medicos = Array.isArray(input.medicos) ? input.medicos : [];\nconst guardias = Array.isArray(input.guardias) ? input.guardias : [];\n\nconst medicosById = new Map(medicos.map(m => [String(m.medico_id), m]));\nconst guardiasById = new Map(guardias.map(g => [String(g.guardia_id), g]));\n\nconst diasSemana = [\n  \"Domingo\",\n  \"Lunes\",\n  \"Martes\",\n  \"Miércoles\",\n  \"Jueves\",\n  \"Viernes\",\n  \"Sábado\"\n];\n\nfunction diaSemana(fecha) {\n  const d = new Date(`${fecha}T00:00:00.000Z`);\n  return diasSemana[d.getUTCDay()];\n}\n\nfunction nombreMedico(id) {\n  const m = medicosById.get(String(id));\n  return m?.nombre_medico || String(id);\n}\n\nfunction fmtNum(n) {\n  if (n === undefined || n === null || Number.isNaN(Number(n))) return \"\";\n  const x = Number(n);\n  return Number.isInteger(x) ? String(x) : String(Math.round(x * 10) / 10);\n}\n\nfunction fmtDiff(n) {\n  const x = Number(n) || 0;\n  const r = Math.round(x * 10) / 10;\n  return r > 0 ? `+${r}` : String(r);\n}\n\nfunction escapeMd(v) {\n  return String(v ?? \"\").replace(/\\|/g, \"\\\\|\");\n}\n\nconst advertencias = Array.isArray(validacion.advertencias_soft)\n  ? validacion.advertencias_soft\n  : [];\n\nconst violaciones = Array.isArray(validacion.violaciones_hard)\n  ? validacion.violaciones_hard\n  : [];\n\nconst idsMedicosConAdvertencia = new Set(\n  advertencias\n    .filter(a => a.medico_id !== undefined && a.medico_id !== null)\n    .map(a => String(a.medico_id))\n);\n\nconst advertenciasPorFecha = new Map();\n\nfor (const adv of advertencias) {\n  if (!adv.fecha) continue;\n  if (!advertenciasPorFecha.has(adv.fecha)) advertenciasPorFecha.set(adv.fecha, []);\n\n  if (adv.tipo === \"ASIGNADO_EN_PREFERIRIA_LIBRAR\") {\n    advertenciasPorFecha.get(adv.fecha).push(\n      `⚠️ ${adv.nombre_medico || nombreMedico(adv.medico_id)} prefería librar`\n    );\n  }\n}\n\nfor (const adv of advertencias) {\n  if (adv.tipo !== \"COBERTURA_NO_EXACTA\") continue;\n  if (!advertenciasPorFecha.has(adv.fecha)) advertenciasPorFecha.set(adv.fecha, []);\n  if (adv.huecos > 0) {\n    advertenciasPorFecha.get(adv.fecha).push(`**(HUECO)** ${adv.huecos} sin cubrir`);\n  }\n}\n\nconst lines = [];\n\nlines.push(\"# 1. Resumen general\");\nlines.push(\"\");\nlines.push(`- **Periodo planificado:** ${escapeMd(periodo)}`);\nlines.push(`- **Total de puestos necesarios:** ${fmtNum(data.total_puestos_necesarios)}`);\nlines.push(`- **Total de puestos cubiertos:** ${fmtNum(data.total_puestos_cubiertos)}`);\nlines.push(`- **Número de huecos sin cubrir:** ${fmtNum(data.total_huecos)}`);\nlines.push(`- **Número de violaciones duras detectadas:** ${fmtNum(validacion.total_violaciones_hard || 0)}`);\nlines.push(`- **Número de advertencias soft detectadas:** ${fmtNum(validacion.total_advertencias_soft || 0)}`);\nlines.push(`- **Score total alcanzado:** ${fmtNum(data.score_total)}`);\nlines.push(\"\");\n\nif (validacion.valido_hard === true) {\n  lines.push(\"✅ Calendario sin violaciones de restricciones duras.\");\n  lines.push(\"\");\n}\n\nlines.push(\"# 2. Calendario día por día\");\nlines.push(\"\");\nlines.push(\"| Fecha | Día semana | Médicos asignados | Observaciones |\");\nlines.push(\"|---|---|---|---|\");\n\nfor (const a of asignaciones) {\n  const guardia = guardiasById.get(String(a.guardia_id));\n  const fecha = a.fecha || guardia?.fecha || \"\";\n  const ids = Array.isArray(a.medico_ids) ? a.medico_ids.map(String) : [];\n\n  const medicosTxt = ids.length > 0\n    ? ids.map(id => nombreMedico(id)).join(\", \")\n    : \"**(HUECO)**\";\n\n  const obs = [];\n\n  if (guardia?.doble_residente) obs.push(\"Doble residente\");\n\n  const esperadas = Number(guardia?.num_guardias) || ids.length;\n  if (ids.length < esperadas) {\n    obs.push(`**(HUECO)** ${esperadas - ids.length} sin cubrir`);\n  }\n\n  const advFecha = advertenciasPorFecha.get(fecha) || [];\n  for (const adv of advFecha) {\n    if (!obs.includes(adv)) obs.push(adv);\n  }\n\n  lines.push(\n    `| ${escapeMd(fecha)} | ${escapeMd(diaSemana(fecha))} | ${escapeMd(medicosTxt)} | ${escapeMd(obs.join(\"; \"))} |`\n  );\n}\n\nlines.push(\"\");\nlines.push(\"# 3. Resumen por médico\");\nlines.push(\"\");\nlines.push(\"| Médico | Año residencia | Objetivo | Asignadas | Diferencia | Fechas |\");\nlines.push(\"|---|---|---:|---:|---:|---|\");\n\nfor (const r of resumenMedicos) {\n  const id = String(r.medico_id);\n  const icono = idsMedicosConAdvertencia.has(id) ? \"⚠️ \" : \"\";\n  const objetivo = r.objetivo_efectivo ?? r.objetivo_explicito ?? r.objetivo_guardias ?? 0;\n  const asignadas = Number(r.num_guardias_asignadas) || 0;\n  const diferencia = r.diferencia_vs_objetivo ?? (asignadas - Number(objetivo || 0));\n  const fechas = Array.isArray(r.fechas_asignadas) && r.fechas_asignadas.length > 0\n    ? r.fechas_asignadas.join(\", \")\n    : \"Ninguna\";\n\n  lines.push(\n    `| ${escapeMd(icono + (r.nombre_medico || id))} | ${escapeMd(r.anio_residencia || \"\")} | ${fmtNum(objetivo)} | ${fmtNum(asignadas)} | ${fmtDiff(diferencia)} | ${escapeMd(fechas)} |`\n  );\n}\n\nlines.push(\"\");\nlines.push(\"# 4. Avisos y validación\");\nlines.push(\"\");\nlines.push(\"## Violaciones duras\");\nlines.push(\"\");\n\nif (validacion.valido_hard === true || violaciones.length === 0) {\n  lines.push(\"✅ Calendario sin violaciones de restricciones duras.\");\n} else {\n  for (const v of violaciones) {\n    lines.push(`- ❌ **${escapeMd(v.tipo)}**: ${escapeMd(JSON.stringify(v))}`);\n  }\n}\n\nlines.push(\"\");\nlines.push(\"## Advertencias soft\");\nlines.push(\"\");\n\nif (advertencias.length === 0) {\n  lines.push(\"No hay advertencias soft.\");\n} else {\n  const grupos = new Map();\n\n  for (const adv of advertencias) {\n    if (!grupos.has(adv.tipo)) grupos.set(adv.tipo, []);\n    grupos.get(adv.tipo).push(adv);\n  }\n\n  for (const [tipo, lista] of grupos.entries()) {\n    let titulo = tipo;\n\n    if (tipo === \"MEDICO_SOBRE_OBJETIVO\") titulo = \"Médico sobre objetivo\";\n    if (tipo === \"MEDICO_BAJO_OBJETIVO\") titulo = \"Médico bajo objetivo\";\n    if (tipo === \"ASIGNADO_EN_PREFERIRIA_LIBRAR\") titulo = \"Médico asignado en fecha que prefería librar\";\n    if (tipo === \"COBERTURA_NO_EXACTA\") titulo = \"Cobertura no exacta\";\n\n    lines.push(`- **${escapeMd(titulo)}:**`);\n\n    for (const adv of lista) {\n      if (tipo === \"MEDICO_SOBRE_OBJETIVO\") {\n        lines.push(`  - ${escapeMd(adv.nombre_medico)}: objetivo ${fmtNum(adv.objetivo)}, asignadas ${fmtNum(adv.asignadas)} (+${fmtNum(adv.exceso)}).`);\n      } else if (tipo === \"MEDICO_BAJO_OBJETIVO\") {\n        lines.push(`  - ${escapeMd(adv.nombre_medico)}: objetivo ${fmtNum(adv.objetivo)}, asignadas ${fmtNum(adv.asignadas)} (-${fmtNum(adv.deficit)}).`);\n      } else if (tipo === \"ASIGNADO_EN_PREFERIRIA_LIBRAR\") {\n        lines.push(`  - ${escapeMd(adv.nombre_medico)} asignado el ${escapeMd(adv.fecha)}.`);\n      } else if (tipo === \"COBERTURA_NO_EXACTA\") {\n        lines.push(`  - ${escapeMd(adv.fecha)}: esperadas ${fmtNum(adv.esperadas)}, asignadas ${fmtNum(adv.asignadas)}, huecos ${fmtNum(adv.huecos)}.`);\n      } else {\n        lines.push(`  - ${escapeMd(JSON.stringify(adv))}`);\n      }\n    }\n  }\n}\n\nlines.push(\"\");\nlines.push(\"# 5. Información de ejecución\");\nlines.push(\"\");\nlines.push(`- **Tiempo de cómputo:** ${fmtNum(stats.tiempo_ms)} ms`);\nlines.push(`- **Número de iteraciones del solver:** ${fmtNum(stats.iteraciones)}`);\nlines.push(`- **Se alcanzó timeout:** ${stats.hit_timeout ? \"Sí\" : \"No\"}`);\n\nif (Array.isArray(stats.heuristicas) && stats.heuristicas.length > 0) {\n  lines.push(`- **Heurísticas utilizadas:** ${stats.heuristicas.join(\", \")}`);\n}\n\nreturn [{\n  json: {\n    ...data,\n    informe_markdown: lines.join(\"\\n\")\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -48
+      ],
+      "id": "eeceba71-1805-4399-b6a0-9dfc64064309",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\n// Si viene envuelto en array o en json_solucion\nlet sol = input;\nif (Array.isArray(input)) sol = input[0];\nif (input.json_solucion && typeof input.json_solucion === 'string') {\n  sol = JSON.parse(input.json_solucion);\n}\n\nfunction simpleHash(str) {\n  let hash = 0;\n  for (let i = 0; i < str.length; i++) {\n    hash = ((hash << 5) - hash) + str.charCodeAt(i);\n    hash = hash | 0;\n  }\n  return Math.abs(hash).toString(16).slice(0, 8);\n}\n\nconst now = new Date();\nconst pad = n => String(n).padStart(2, '0');\n\nconst yyyy = now.getFullYear();\nconst mm = pad(now.getMonth() + 1);\nconst dd = pad(now.getDate());\nconst hh = pad(now.getHours());\nconst min = pad(now.getMinutes());\n\nconst periodo = sol.periodo || 'periodo';\nconst stamp = `${yyyy}-${mm}-${dd}_${hh}${min}`;\n\nconst stableString = JSON.stringify({\n  periodo: sol.periodo,\n  calendario: sol.calendario,\n  resumen_medicos: sol.resumen_medicos,\n  validacion: sol.validacion,\n});\n\nconst solutionHash = simpleHash(stableString);\n\nconst safePeriodo = String(periodo)\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/[^a-zA-Z0-9_ -]/g, '')\n  .replace(/\\s+/g, '_')\n  .slice(0, 40);\n\nconst sheetName = `${safePeriodo}_${stamp}_${solutionHash}`.slice(0, 90);\nconst solutionId = `sol_${safePeriodo}_${stamp}_${solutionHash}`;\n\nconst medicos = sol.input_original?.medicos || [];\nconst guardias = sol.input_original?.guardias || [];\nconst asignaciones = sol.calendario?.asignaciones || [];\nconst resumenMedicos = sol.resumen_medicos || [];\nconst validacion = sol.validacion || {};\n\nconst medicoById = Object.fromEntries(\n  medicos.map(m => [String(m.medico_id), m])\n);\n\nconst guardiaByFecha = Object.fromEntries(\n  guardias.map(g => [g.fecha, g])\n);\n\nfunction nombreMedico(id) {\n  return medicoById[String(id)]?.nombre_medico || String(id);\n}\n\nfunction row(c1 = '', c2 = '', c3 = '', c4 = '', c5 = '', c6 = '', c7 = '', c8 = '') {\n  return {\n    sheet_name: sheetName,\n    solution_id: solutionId,\n    col_1: c1,\n    col_2: c2,\n    col_3: c3,\n    col_4: c4,\n    col_5: c5,\n    col_6: c6,\n    col_7: c7,\n    col_8: c8,\n  };\n}\n\nconst rows = [];\n\nrows.push(row('SOLUCIÓN GUARDIAS'));\nrows.push(row('solution_id', solutionId));\nrows.push(row('sheet_name', sheetName));\nrows.push(row('created_at', now.toISOString()));\nrows.push(row('periodo', periodo));\nrows.push(row('solution_hash', solutionHash));\nrows.push(row());\n\nrows.push(row('RESUMEN GENERAL'));\nrows.push(row('puestos cubiertos', `${sol.total_puestos_cubiertos ?? 0}/${sol.total_puestos_necesarios ?? 0}`));\nrows.push(row('huecos', sol.total_huecos ?? 0));\nrows.push(row('válido hard', validacion.valido_hard ?? sol.valido_hard ?? ''));\nrows.push(row('violaciones hard', validacion.total_violaciones_hard ?? sol.total_violaciones_hard ?? 0));\nrows.push(row('advertencias soft', validacion.total_advertencias_soft ?? sol.total_advertencias_soft ?? 0));\nrows.push(row('score total', sol.score_total ?? ''));\nrows.push(row());\n\nrows.push(row('VIOLACIONES HARD'));\nrows.push(row('tipo', 'médico', 'fecha', 'detalle'));\n\nconst violacionesHard = validacion.violaciones_hard || [];\nif (violacionesHard.length === 0) {\n  rows.push(row('Sin violaciones hard'));\n} else {\n  for (const v of violacionesHard) {\n    rows.push(row(\n      v.tipo || '',\n      v.nombre_medico || v.medico_id || '',\n      v.fecha || '',\n      v.detalle || JSON.stringify(v)\n    ));\n  }\n}\nrows.push(row());\n\nrows.push(row('ADVERTENCIAS SOFT'));\nrows.push(row('tipo', 'médico', 'objetivo', 'asignadas', 'diferencia'));\n\nconst advertencias = validacion.advertencias_soft || [];\nif (advertencias.length === 0) {\n  rows.push(row('Sin advertencias soft'));\n} else {\n  for (const a of advertencias) {\n    const diferencia =\n      a.exceso !== undefined ? `+${a.exceso}` :\n      a.deficit !== undefined ? `-${a.deficit}` :\n      '';\n\n    rows.push(row(\n      a.tipo || '',\n      a.nombre_medico || a.medico_id || '',\n      a.objetivo ?? '',\n      a.asignadas ?? '',\n      diferencia\n    ));\n  }\n}\nrows.push(row());\n\nrows.push(row('RESUMEN POR MÉDICO'));\nrows.push(row('médico', 'año', 'objetivo', 'asignadas', 'diferencia', 'fechas'));\n\nfor (const m of resumenMedicos) {\n  rows.push(row(\n    m.nombre_medico || '',\n    m.anio_residencia || '',\n    m.objetivo_efectivo ?? m.objetivo_explicito ?? '',\n    m.num_guardias_asignadas ?? '',\n    m.diferencia_vs_objetivo ?? '',\n    Array.isArray(m.fechas_asignadas) ? m.fechas_asignadas.join(', ') : ''\n  ));\n}\nrows.push(row());\n\nrows.push(row('CALENDARIO'));\nrows.push(row('fecha', 'día', 'médicos asignados', 'nº guardias', 'doble residente', 'semana'));\n\nfor (const a of asignaciones) {\n  const g = guardiaByFecha[a.fecha] || {};\n  const nombres = (a.medico_ids || []).map(nombreMedico).join(', ');\n\n  rows.push(row(\n    a.fecha || '',\n    g.dia_semana || '',\n    nombres,\n    g.num_guardias ?? (a.medico_ids || []).length,\n    g.doble_residente ? 'Sí' : 'No',\n    g.semana || ''\n  ));\n}\nrows.push(row());\n\n\nreturn rows.map(r => ({ json: r }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -48
+      ],
+      "id": "3c0db0b1-6cf8-4319-a49d-865ea6281755",
+      "name": "Preparar solución guardada"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "documentId": {
+          "__rl": true,
+          "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
+          "mode": "list",
+          "cachedResultName": "Guardias Hospital",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit?usp=drivesdk"
+        },
+        "title": "={{ $json.sheet_name }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        976,
+        192
+      ],
+      "id": "8130d468-85ac-4067-8b51-021091f1852b",
+      "name": "Create sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://sheets.googleapis.com/v4/spreadsheets/{{$json.spreadsheetId}}/values/{{$json.title}}!A1:H1?valueInputOption=RAW",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleSheetsOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"values\": [\n    [\"col_1\", \"col_2\", \"col_3\", \"col_4\", \"col_5\", \"col_6\", \"col_7\", \"col_8\"]\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1184,
+        192
+      ],
+      "id": "fec8a8d7-9406-4bbe-bb7f-92394ee10302",
+      "name": "HTTP Request",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE",
+          "mode": "list",
+          "cachedResultName": "Guardias Hospital",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1iSVOppVpLrGEDa3F1d8apyOmuIzleds6L81IG9DM6ZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.sheet_name }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "col_1": "={{ $json.col_1 }}",
+            "col_2": "={{ $json.col_2 }}",
+            "col_3": "={{ $json.col_3 }}",
+            "col_4": "={{ $json.col_4 }}",
+            "col_5": "={{ $json.col_5 }}",
+            "col_6": "={{ $json.col_6 }}",
+            "col_7": "={{ $json.col_7 }}",
+            "col_8": "={{ $json.col_8 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "col_1",
+              "displayName": "col_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_2",
+              "displayName": "col_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_3",
+              "displayName": "col_3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_4",
+              "displayName": "col_4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_5",
+              "displayName": "col_5",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_6",
+              "displayName": "col_6",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_7",
+              "displayName": "col_7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "col_8",
+              "displayName": "col_8",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        -32
+      ],
+      "id": "2d687402-4701-4c21-9d3f-74cf40b388a0",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1440,
+        -32
+      ],
+      "id": "4c7a740f-b22f-4be5-b374-da666214c2cc",
+      "name": "Merge1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read Disponibilidades_guardias",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read Disponibilidades_guardias1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Disponibilidades_guardias": {
+      "main": [
+        [
+          {
+            "node": "Code limpiar disponibilidades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Disponibilidades_guardias1": {
+      "main": [
+        [
+          {
+            "node": "Code limpiar guardias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Preparar input asignacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code limpiar disponibilidades": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code limpiar guardias": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Preparar input asignacion": {
+      "main": [
+        [
+          {
+            "node": "Resolver CSP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolver CSP": {
+      "main": [
+        [
+          {
+            "node": "Validador final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validador final": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Preparar solución guardada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar solución guardada": {
+      "main": [
+        [
+          {
+            "node": "Create sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        []
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3d91192f-311a-4a19-a27d-2afa4c9b370c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
+  },
+  "id": "i6QpxXTIgR3n5MSF",
+  "tags": []
+}
