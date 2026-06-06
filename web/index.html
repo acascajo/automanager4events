@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartAssign — Plataforma de asignación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <!-- SheetJS: generación y exportación de archivos .xlsx en el navegador -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════
+       LOGIN
+  ════════════════════════════════════════ -->
+  <div id="screen-login" class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">SmartAssign</div>
+      <div class="login-logo-sub">plataforma de asignación v1.0</div>
+      <label class="login-label">Usuario</label>
+      <input class="login-input" type="text" id="login-user" placeholder="admin" />
+      <label class="login-label">Contraseña</label>
+      <input class="login-input" type="password" id="login-pass" placeholder="••••••••" />
+      <button class="btn btn-primary login-btn" id="login-btn">
+        <i class="ti ti-login"></i> Iniciar sesión
+      </button>
+      <p class="login-hint">Demo: usa cualquier usuario y contraseña</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       APP SHELL
+  ════════════════════════════════════════ -->
+  <div id="screen-app" class="app hidden">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-name">SmartAssign</div>
+        <div class="logo-sub">asignación de recursos</div>
+      </div>
+      <div class="sidebar-nav">
+        <button class="nav-item active" data-page="dashboard" id="nav-dashboard">
+          <i class="ti ti-layout-dashboard"></i> Panel principal
+        </button>
+        <div class="nav-section-label">Módulos</div>
+        <button class="nav-item" data-page="catering" id="nav-catering">
+          <span class="nav-module-dot dot-catering"></span> Catering
+        </button>
+        <button class="nav-item" data-page="guardias" id="nav-guardias">
+          <span class="nav-module-dot dot-guardias"></span> Guardias médicas
+        </button>
+        <button class="nav-item" data-page="software" id="nav-software">
+          <span class="nav-module-dot dot-software"></span> Proyectos software
+        </button>
+        <div class="nav-section-label">Sistema</div>
+        <button class="nav-item" data-page="historial" id="nav-historial">
+          <i class="ti ti-history"></i> Historial
+        </button>
+        <button class="nav-item" data-page="config" id="nav-config">
+          <i class="ti ti-settings"></i> Configuración
+        </button>
+      </div>
+      <div class="sidebar-user">
+        <div class="user-avatar" id="user-avatar">PA</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">Pablo A.</div>
+          <div class="user-role">Administrador</div>
+        </div>
+        <button class="btn btn-icon" id="logout-btn" title="Cerrar sesión">
+          <i class="ti ti-logout"></i>
+        </button>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div class="topbar-breadcrumb" id="topbar-bc">Panel principal</div>
+        <div class="topbar-actions">
+          <div id="n8n-indicator" class="n8n-badge disconnected">
+            <span class="badge-dot"></span>
+            <span id="n8n-badge-text">n8n desconectado</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div id="page-dashboard" class="page active">
+          <div class="page-header">
+            <div class="page-title">Panel principal</div>
+            <div class="page-sub">Resumen de actividad de la plataforma</div>
+          </div>
+          <div class="stats-row">
+            <div class="stat-card"><div class="stat-label">Ejecuciones totales</div><div class="stat-value">24</div><div class="stat-delta"><i class="ti ti-arrow-up"></i> 6 este mes</div></div>
+            <div class="stat-card"><div class="stat-label">Tasa de éxito</div><div class="stat-value">92%</div><div class="stat-delta success-text">sin incidencias críticas</div></div>
+            <div class="stat-card"><div class="stat-label">Recursos asignados</div><div class="stat-value">187</div><div class="stat-delta muted">acumulado</div></div>
+            <div class="stat-card"><div class="stat-label">Módulos activos</div><div class="stat-value">3</div><div class="stat-delta muted">catering · guardias · software</div></div>
+          </div>
+          <div class="module-grid">
+            <div class="module-card" data-goto="catering">
+              <div class="module-card-accent accent-teal"></div>
+              <div class="module-icon icon-teal"><i class="ti ti-tools-kitchen-2"></i></div>
+              <div class="module-title">Catering</div>
+              <div class="module-desc">Asignación de camareros a eventos según disponibilidad, experiencia y vehículo.</div>
+              <div class="module-stats">
+                <div class="module-stat"><strong>8</strong>ejecuciones</div>
+                <div class="module-stat"><strong>3</strong>este mes</div>
+              </div>
+            </div>
+            <div class="module-card" data-goto="guardias">
+              <div class="module-card-accent accent-blue"></div>
+              <div class="module-icon icon-blue"><i class="ti ti-stethoscope"></i></div>
+              <div class="module-title">Guardias médicas</div>
+              <div class="module-desc">Planificación mensual de guardias de residentes con restricciones CSP.</div>
+              <div class="module-stats">
+                <div class="module-stat"><strong>9</strong>ejecuciones</div>
+                <div class="module-stat"><strong>2</strong>este mes</div>
+              </div>
+            </div>
+            <div class="module-card" data-goto="software">
+              <div class="module-card-accent accent-amber"></div>
+              <div class="module-icon icon-amber"><i class="ti ti-code"></i></div>
+              <div class="module-title">Proyectos software</div>
+              <div class="module-desc">Asignación heurística de tareas con scoring de encaje persona-tarea por LLM.</div>
+              <div class="module-stats">
+                <div class="module-stat"><strong>7</strong>ejecuciones</div>
+                <div class="module-stat"><strong>1</strong>este mes</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-header">
+              <div class="section-title">Últimas ejecuciones</div>
+              <button class="btn btn-sm" data-goto="historial">Ver todo</button>
+            </div>
+            <div class="exec-row">
+              <span class="badge badge-catering">Catering</span>
+              <div class="exec-info"><div class="exec-name">Evento Gala Madrid · 14 jun</div><div class="exec-meta">Hace 2 horas · 12 camareros asignados</div></div>
+              <span class="badge badge-ok">Completado</span>
+            </div>
+            <div class="exec-row">
+              <span class="badge badge-guardias">Guardias</span>
+              <div class="exec-info"><div class="exec-name">Planificación julio 2026</div><div class="exec-meta">Ayer · 8 residentes · 31 días</div></div>
+              <span class="badge badge-ok">Completado</span>
+            </div>
+            <div class="exec-row">
+              <span class="badge badge-software">Software</span>
+              <div class="exec-info"><div class="exec-name">Sprint 14 — Equipo Backend</div><div class="exec-meta">3 jun · 6 tareas · 4 desarrolladores</div></div>
+              <span class="badge badge-warn">2 avisos</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CATERING -->
+        <div id="page-catering" class="page hidden">
+          <div class="page-header">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+              <span class="module-dot dot-catering"></span>
+              <div class="page-title" style="margin-bottom:0;">Catering</div>
+            </div>
+            <div class="page-sub">Asignación de camareros a eventos de catering</div>
+          </div>
+          <div class="tabs" id="catering-tabs">
+            <button class="tab active" data-tab="catering-preparar">Preparar asignación</button>
+            <button class="tab" data-tab="catering-resultados">Resultados</button>
+          </div>
+          <div id="catering-preparar" class="tab-panel active">
+            <div class="panel-layout">
+              <div class="panel-main">
+                <div class="card">
+                  <div class="section-header">
+                    <div class="section-title">Datos de entrada</div>
+                    <button class="btn btn-sm" onclick="downloadTemplate('catering')"><i class="ti ti-download"></i> Descargar plantilla</button>
+                  </div>
+                  <div class="card-body">
+                    <p class="help-text">Descarga la plantilla Excel, rellénala con los datos del evento y súbela aquí.</p>
+                    <div class="upload-zone" id="catering-upload-zone" onclick="triggerUpload('catering')">
+                      <input type="file" id="catering-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleFileUpload(event,'catering')" />
+                      <div class="upload-icon"><i class="ti ti-file-spreadsheet"></i></div>
+                      <div class="upload-label">Haz clic para subir el archivo Excel</div>
+                      <div class="upload-hint">plantilla_catering.xlsx · máx. 5 MB</div>
+                    </div>
+                    <div class="file-info hidden" id="catering-file-info">
+                      <i class="ti ti-file-check" style="color:var(--success-text);font-size:18px;"></i>
+                      <div style="flex:1;">
+                        <div class="file-info-name" id="catering-file-name">archivo.xlsx</div>
+                        <div class="file-info-meta" id="catering-file-meta">Listo para procesar</div>
+                      </div>
+                      <button class="btn btn-sm" onclick="removeFile('catering')"><i class="ti ti-x"></i></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Configuración del evento</div></div>
+                  <div class="card-body">
+                    <div class="config-row">
+                      <div><div class="config-label">Nombre del evento</div><div class="config-sub">Identificador para el historial</div></div>
+                      <input class="config-input" type="text" id="catering-nombre" placeholder="Gala julio 2026" />
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Mínimo camareros con vehículo</div><div class="config-sub">Por evento con ubicación remota</div></div>
+                      <input class="config-input config-input-sm" type="number" id="catering-vehiculos" value="2" />
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Motor de asignación</div><div class="config-sub">LLM con fallback heurístico</div></div>
+                      <select class="config-select" id="catering-motor">
+                        <option value="auto">Automático (recomendado)</option>
+                        <option value="llm">Solo LLM</option>
+                        <option value="heuristic">Solo heurístico</option>
+                      </select>
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Notificar asignaciones por email</div><div class="config-sub">Envía confirmación a los camareros</div></div>
+                      <input type="checkbox" id="catering-email" />
+                    </div>
+                  </div>
+                  <div class="run-footer">
+                    <div class="run-status" id="catering-run-status">Sube el archivo para continuar</div>
+                    <button class="btn btn-primary" id="catering-run-btn" onclick="runWorkflow('catering')" disabled>
+                      <i class="ti ti-bolt"></i> Lanzar con n8n
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="panel-side">
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Progreso</div></div>
+                  <div class="card-body">
+                    <div class="step-list" id="catering-steps">
+                      <div class="step-item"><div class="step-num step-active">1</div><div class="step-content"><div class="step-label">Subir datos</div><div class="step-sub">Archivo Excel con camareros y eventos</div></div></div>
+                      <div class="step-item"><div class="step-num">2</div><div class="step-content"><div class="step-label">Normalización</div><div class="step-sub">Procesamiento en Google Sheets</div></div></div>
+                      <div class="step-item"><div class="step-num">3</div><div class="step-content"><div class="step-label">Motor de asignación</div><div class="step-sub">LLM + validación heurística</div></div></div>
+                      <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-label">Validación</div><div class="step-sub">Comprobación de restricciones</div></div></div>
+                      <div class="step-item"><div class="step-num">5</div><div class="step-content"><div class="step-label">Resultados</div><div class="step-sub">Informe y persistencia</div></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Plantilla Excel</div></div>
+                  <div class="card-body">
+                    <p class="help-text" style="margin-bottom:10px;">La plantilla contiene 3 hojas:</p>
+                    <div class="sheet-list">
+                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 1: Disponibilidad camareros</div>
+                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 2: Base de datos camareros</div>
+                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 3: Eventos y requisitos</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="catering-resultados" class="tab-panel hidden">
+            <div class="results-header">
+              <div>
+                <div class="results-title">Eventos · 14-15 jul 2026</div>
+                <div class="results-meta">Motor: LLM + fallback heurístico · ID: CAT-2026-014</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-sm" onclick="exportResults('catering')"><i class="ti ti-download"></i> Exportar</button>
+                <span class="badge badge-ok" style="padding:6px 12px;">Completado</span>
+              </div>
+            </div>
+            <div class="result-stats">
+              <div class="stat-card"><div class="stat-label">Camareros asignados</div><div class="stat-value" id="cat-stat-asignados">—</div></div>
+              <div class="stat-card"><div class="stat-label">Eventos cubiertos</div><div class="stat-value" id="cat-stat-eventos">—</div></div>
+              <div class="stat-card"><div class="stat-label">Con vehículo propio</div><div class="stat-value" id="cat-stat-vehiculo">—</div></div>
+              <div class="stat-card"><div class="stat-label">Avisos</div><div class="stat-value warn-val" id="cat-stat-avisos">—</div></div>
+            </div>
+            <div class="card" style="margin-bottom:16px;">
+              <div class="section-header"><div class="section-title">Asignaciones</div></div>
+              <table class="data-table" id="catering-results-table">
+                <thead><tr><th>Camarero</th><th>Evento</th><th>Fecha</th><th>Vehículo</th><th>Score</th></tr></thead>
+                <tbody id="catering-results-tbody"></tbody>
+              </table>
+            </div>
+            <div class="card">
+              <div class="section-header"><div class="section-title">Validación y advertencias</div></div>
+              <div class="card-body" id="catering-results-alerts"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GUARDIAS -->
+        <div id="page-guardias" class="page hidden">
+          <div class="page-header">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+              <span class="module-dot dot-guardias"></span>
+              <div class="page-title" style="margin-bottom:0;">Guardias médicas</div>
+            </div>
+            <div class="page-sub">Planificación mensual de guardias de residentes</div>
+          </div>
+          <div class="tabs" id="guardias-tabs">
+            <button class="tab active" data-tab="guardias-configurar">Configurar</button>
+            <button class="tab" data-tab="guardias-calendario">Calendario</button>
+          </div>
+          <div id="guardias-configurar" class="tab-panel active">
+            <div class="panel-layout">
+              <div class="panel-main">
+                <div class="card">
+                  <div class="section-header">
+                    <div class="section-title">Base de datos de médicos</div>
+                    <div style="display:flex;gap:8px;">
+                      <button class="btn btn-sm" onclick="downloadTemplate('guardias')"><i class="ti ti-download"></i> Plantilla</button>
+                      <button class="btn btn-sm" onclick="triggerUpload('guardias')"><i class="ti ti-upload"></i> Actualizar</button>
+                      <input type="file" id="guardias-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleFileUpload(event,'guardias')" />
+                    </div>
+                  </div>
+                  <table class="data-table">
+                    <thead><tr><th>Residente</th><th>Año</th><th>Rotación</th><th>Obj. guardias</th><th>Estado</th></tr></thead>
+                    <tbody>
+                      <tr><td><div class="person-cell"><div class="avatar blue">MG</div>Marta García</div></td><td>R2</td><td>Cardiología</td><td>8</td><td><span class="badge badge-ok">Activa</span></td></tr>
+                      <tr><td><div class="person-cell"><div class="avatar teal">JL</div>Juan López</div></td><td>R1</td><td>Urgencias</td><td>6</td><td><span class="badge badge-ok">Activo</span></td></tr>
+                      <tr><td><div class="person-cell"><div class="avatar amber">SR</div>Sara Ruiz</div></td><td>R3</td><td>UCI</td><td>10</td><td><span class="badge badge-ok">Activa</span></td></tr>
+                      <tr><td><div class="person-cell"><div class="avatar coral">PM</div>Pedro Martín</div></td><td>R2</td><td>Medicina interna</td><td>8</td><td><span class="badge badge-warn">Rotación</span></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Configuración del periodo</div></div>
+                  <div class="card-body">
+                    <div class="config-row">
+                      <div><div class="config-label">Mes de planificación</div></div>
+                      <select class="config-select" id="guardias-mes">
+                        <option>Julio 2026</option><option>Agosto 2026</option>
+                      </select>
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Fecha límite de respuesta</div><div class="config-sub">Plazo para recibir disponibilidades</div></div>
+                      <input class="config-input" type="date" id="guardias-deadline" value="2026-06-20" />
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Guardias/día entre semana</div></div>
+                      <select class="config-select" id="guardias-semana"><option value="1">1 residente</option><option value="2">2 residentes</option></select>
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Guardias/día festivo o fin de semana</div></div>
+                      <select class="config-select" id="guardias-finde"><option value="2">2 residentes</option><option value="1">1 residente</option></select>
+                    </div>
+                  </div>
+                  <div class="run-footer">
+                    <div class="run-status" id="guardias-run-status">Configura el periodo antes de enviar</div>
+                    <button class="btn" onclick="runWorkflow('guardias-send')"><i class="ti ti-mail"></i> Enviar solicitudes</button>
+                    <button class="btn btn-primary" onclick="runWorkflow('guardias-plan')"><i class="ti ti-bolt"></i> Generar calendario</button>
+                  </div>
+                </div>
+              </div>
+              <div class="panel-side">
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Estado de respuestas</div></div>
+                  <div class="card-body">
+                    <div style="margin-bottom:12px;">
+                      <div class="help-text" style="margin-bottom:6px;">Respuestas recibidas</div>
+                      <div class="progress-track"><div class="progress-bar" style="width:75%;"></div></div>
+                      <div class="muted-text" style="margin-top:4px;font-size:11px;">3 de 4 residentes han respondido</div>
+                    </div>
+                    <div class="response-list">
+                      <div class="response-row"><span>Marta García</span><span class="badge badge-ok">Recibida</span></div>
+                      <div class="response-row"><span>Juan López</span><span class="badge badge-ok">Recibida</span></div>
+                      <div class="response-row"><span>Sara Ruiz</span><span class="badge badge-ok">Recibida</span></div>
+                      <div class="response-row"><span>Pedro Martín</span><span class="badge badge-warn">Pendiente</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Progreso del flujo</div></div>
+                  <div class="card-body">
+                    <div class="step-list" id="guardias-steps">
+                      <div class="step-item"><div class="step-num step-done"><i class="ti ti-check"></i></div><div class="step-content"><div class="step-label">Cargar médicos</div><div class="step-sub">4 residentes en BD</div></div></div>
+                      <div class="step-item"><div class="step-num step-done"><i class="ti ti-check"></i></div><div class="step-content"><div class="step-label">Enviar solicitudes</div><div class="step-sub">Correos enviados el 5 jun</div></div></div>
+                      <div class="step-item"><div class="step-num step-active">3</div><div class="step-content"><div class="step-label">Recoger respuestas</div><div class="step-sub">3/4 recibidas</div></div></div>
+                      <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-label">Generar calendario</div><div class="step-sub">Solver CSP con restricciones</div></div></div>
+                      <div class="step-item"><div class="step-num">5</div><div class="step-content"><div class="step-label">Publicar resultados</div></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="guardias-calendario" class="tab-panel hidden">
+            <div class="results-header">
+              <div>
+                <div class="results-title">Calendario julio 2026</div>
+                <div class="results-meta">Generado ayer · Solver CSP · ID: MED-2026-007</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-sm" onclick="exportResults('guardias')"><i class="ti ti-download"></i> Exportar</button>
+                <span class="badge badge-ok" style="padding:6px 12px;">Completado</span>
+              </div>
+            </div>
+            <div class="result-stats" style="margin-bottom:16px;">
+              <div class="stat-card"><div class="stat-label">Días planificados</div><div class="stat-value" id="gd-stat-dias">—</div></div>
+              <div class="stat-card"><div class="stat-label">Guardias totales</div><div class="stat-value" id="gd-stat-guardias">—</div></div>
+              <div class="stat-card"><div class="stat-label">Cobertura</div><div class="stat-value" id="gd-stat-cobertura">—</div></div>
+              <div class="stat-card"><div class="stat-label">Restricciones violadas</div><div class="stat-value success-val" id="gd-stat-violadas">—</div></div>
+            </div>
+            <div class="card">
+              <div class="section-header">
+                <div class="section-title">Julio 2026</div>
+                <div style="display:flex;gap:12px;font-size:11px;align-items:center;">
+                  <span class="cal-legend"><span class="cal-dot single"></span> 1 residente</span>
+                  <span class="cal-legend"><span class="cal-dot double"></span> 2 residentes</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="cal-grid" id="calendar-jul-2026"></div>
+              </div>
+            </div>
+            <div class="panel-layout" style="margin-top:16px;">
+              <div class="panel-main">
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Resumen por médico</div></div>
+                  <table class="data-table">
+                    <thead><tr><th>Residente</th><th>Año</th><th>Rotación</th><th>Guardias / objetivo</th><th>Estado</th></tr></thead>
+                    <tbody id="guardias-summary"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="panel-side">
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Validación y advertencias</div></div>
+                  <div class="card-body" id="guardias-warnings"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOFTWARE -->
+        <div id="page-software" class="page hidden">
+          <div class="page-header">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+              <span class="module-dot dot-software"></span>
+              <div class="page-title" style="margin-bottom:0;">Proyectos software</div>
+            </div>
+            <div class="page-sub">Asignación heurística de tareas con scoring LLM</div>
+          </div>
+          <div class="tabs" id="software-tabs">
+            <button class="tab active" data-tab="software-preparar">Preparar asignación</button>
+            <button class="tab" data-tab="software-resultados">Resultados</button>
+          </div>
+          <div id="software-preparar" class="tab-panel active">
+            <div class="panel-layout">
+              <div class="panel-main">
+                <div class="card">
+                  <div class="section-header">
+                    <div class="section-title">Datos del equipo y tareas</div>
+                    <button class="btn btn-sm" onclick="downloadTemplate('software')"><i class="ti ti-download"></i> Descargar plantilla</button>
+                  </div>
+                  <div class="card-body">
+                    <p class="help-text">Plantilla con 3 hojas: equipo, proyectos y tareas.</p>
+                    <div class="upload-zone" id="software-upload-zone" onclick="triggerUpload('software')">
+                      <input type="file" id="software-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleFileUpload(event,'software')" />
+                      <div class="upload-icon"><i class="ti ti-file-spreadsheet"></i></div>
+                      <div class="upload-label">Haz clic para subir el archivo Excel</div>
+                      <div class="upload-hint">plantilla_software.xlsx · máx. 5 MB</div>
+                    </div>
+                    <div class="file-info hidden" id="software-file-info">
+                      <i class="ti ti-file-check" style="color:var(--success-text);font-size:18px;"></i>
+                      <div style="flex:1;">
+                        <div class="file-info-name" id="software-file-name">archivo.xlsx</div>
+                        <div class="file-info-meta" id="software-file-meta">Listo para procesar</div>
+                      </div>
+                      <button class="btn btn-sm" onclick="removeFile('software')"><i class="ti ti-x"></i></button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Parámetros de asignación</div></div>
+                  <div class="card-body">
+                    <div class="config-row">
+                      <div><div class="config-label">Nombre del sprint / proyecto</div></div>
+                      <input class="config-input" type="text" id="software-nombre" placeholder="Sprint 15" />
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Priorizar encaje de habilidades</div><div class="config-sub">El LLM pondera el match de skills</div></div>
+                      <input type="checkbox" id="software-skills" checked />
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Límite de horas por persona</div></div>
+                      <input class="config-input config-input-sm" type="number" id="software-horas" value="40" />
+                    </div>
+                    <div class="config-row">
+                      <div><div class="config-label">Umbral mínimo de score</div><div class="config-sub">Por debajo → advertencia</div></div>
+                      <input class="config-input config-input-sm" type="number" id="software-umbral" value="6" />
+                    </div>
+                  </div>
+                  <div class="run-footer">
+                    <div class="run-status" id="software-run-status">Sube el archivo para continuar</div>
+                    <button class="btn btn-primary" id="software-run-btn" onclick="runWorkflow('software')" disabled>
+                      <i class="ti ti-bolt"></i> Lanzar con n8n
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="panel-side">
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Progreso</div></div>
+                  <div class="card-body">
+                    <div class="step-list" id="software-steps">
+                      <div class="step-item"><div class="step-num step-active">1</div><div class="step-content"><div class="step-label">Subir datos</div><div class="step-sub">Equipo, proyectos y tareas</div></div></div>
+                      <div class="step-item"><div class="step-num">2</div><div class="step-content"><div class="step-label">Normalización</div></div></div>
+                      <div class="step-item"><div class="step-num">3</div><div class="step-content"><div class="step-label">Scoring LLM</div><div class="step-sub">Encaje persona-tarea</div></div></div>
+                      <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-label">Asignación heurística</div></div></div>
+                      <div class="step-item"><div class="step-num">5</div><div class="step-content"><div class="step-label">Validación y resultados</div></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Plantilla Excel</div></div>
+                  <div class="card-body">
+                    <p class="help-text" style="margin-bottom:10px;">La plantilla contiene 3 hojas:</p>
+                    <div class="sheet-list">
+                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 1: Equipo y habilidades</div>
+                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 2: Proyectos activos</div>
+                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 3: Tareas a asignar</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="software-resultados" class="tab-panel hidden">
+            <div class="results-header">
+              <div>
+                <div class="results-title">Sprint 14 — Equipo Backend</div>
+                <div class="results-meta">Ejecutado el 3 jun · Motor heurístico + LLM scoring · ID: SW-2026-011</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-sm" onclick="exportResults('software')"><i class="ti ti-download"></i> Exportar</button>
+                <span class="badge badge-warn" style="padding:6px 12px;" id="sw-status-badge">Resultados</span>
+              </div>
+            </div>
+            <div class="result-stats" style="margin-bottom:16px;">
+              <div class="stat-card"><div class="stat-label">Tareas asignadas</div><div class="stat-value" id="sw-stat-tareas">—</div></div>
+              <div class="stat-card"><div class="stat-label">Desarrolladores</div><div class="stat-value" id="sw-stat-devs">—</div></div>
+              <div class="stat-card"><div class="stat-label">Score medio (pts)</div><div class="stat-value" id="sw-stat-score">—</div></div>
+              <div class="stat-card"><div class="stat-label">Horas totales</div><div class="stat-value" id="sw-stat-horas">—</div></div>
+            </div>
+            <div class="card" style="margin-bottom:16px;">
+              <div class="section-header"><div class="section-title">Asignaciones</div></div>
+              <table class="data-table" id="software-results-table">
+                <thead><tr><th>Desarrollador</th><th>Tarea</th><th>Skills (✓ cubre · ✗ falta)</th><th>Horas</th><th>Score</th></tr></thead>
+                <tbody id="software-results-tbody"></tbody>
+              </table>
+            </div>
+            <div class="panel-layout">
+              <div class="panel-main">
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Tareas no asignadas y recomendaciones</div></div>
+                  <div class="card-body" id="software-unassigned"></div>
+                </div>
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Avisos del sistema</div></div>
+                  <div class="card-body" id="software-results-alerts"></div>
+                </div>
+              </div>
+              <div class="panel-side">
+                <div class="card">
+                  <div class="section-header"><div class="section-title">Distribución de carga</div></div>
+                  <div class="card-body" id="software-load"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HISTORIAL -->
+        <div id="page-historial" class="page hidden">
+          <div class="page-header">
+            <div class="page-title">Historial de ejecuciones</div>
+            <div class="page-sub">Consulta y compara ejecuciones anteriores</div>
+          </div>
+          <div class="history-filters">
+            <button class="filter-btn active" data-filter="all">Todas</button>
+            <button class="filter-btn" data-filter="catering">Catering</button>
+            <button class="filter-btn" data-filter="guardias">Guardias</button>
+            <button class="filter-btn" data-filter="software">Software</button>
+          </div>
+          <div class="card">
+            <div class="section-header"><div class="section-title">24 ejecuciones registradas</div></div>
+            <div class="history-row" data-module="catering"><span class="history-id">CAT-014</span><span class="badge badge-catering">Catering</span><div class="exec-info"><div class="exec-name">Gala Madrid · 14 jun 2026</div><div class="exec-meta">06/06/2026 · 12 asignados · 2 avisos</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
+            <div class="history-row" data-module="guardias"><span class="history-id">MED-007</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Julio 2026</div><div class="exec-meta">05/06/2026 · 4 residentes · 31 días</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
+            <div class="history-row" data-module="software"><span class="history-id">SW-011</span><span class="badge badge-software">Software</span><div class="exec-info"><div class="exec-name">Sprint 14 — Backend</div><div class="exec-meta">03/06/2026 · 6 tareas · 4 devs</div></div><span class="badge badge-warn">2 avisos</span><button class="btn btn-sm">Ver</button></div>
+            <div class="history-row" data-module="catering"><span class="history-id">CAT-013</span><span class="badge badge-catering">Catering</span><div class="exec-info"><div class="exec-name">Cóctel corporativo · 28 may</div><div class="exec-meta">25/05/2026 · 8 asignados · 0 avisos</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
+            <div class="history-row" data-module="guardias"><span class="history-id">MED-006</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Junio 2026</div><div class="exec-meta">28/05/2026 · 4 residentes · 30 días</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
+          </div>
+        </div>
+
+        <!-- CONFIG -->
+        <div id="page-config" class="page hidden">
+          <div class="page-header">
+            <div class="page-title">Configuración</div>
+            <div class="page-sub">Conexión con n8n y ajustes del sistema</div>
+          </div>
+          <div class="panel-layout">
+            <div class="panel-main">
+              <div class="card">
+                <div class="section-header"><div class="section-title">Conexión con n8n</div></div>
+                <div class="card-body">
+                  <div class="n8n-status-card" id="n8n-status-card">
+                    <div class="status-dot disconnected" id="n8n-dot"></div>
+                    <div>
+                      <div class="status-text" id="n8n-status-text"><strong>n8n desconectado</strong></div>
+                      <div class="status-detail" id="n8n-status-detail">Configura la URL base y verifica la conexión</div>
+                    </div>
+                  </div>
+                  <div class="webhook-row">
+                    <span class="webhook-label">URL base n8n</span>
+                    <input class="webhook-input" id="n8n-base-url" placeholder="http://localhost:5678" />
+                    <button class="btn btn-sm" onclick="testN8nConnection()"><i class="ti ti-plug"></i> Verificar</button>
+                  </div>
+                  <div class="section-divider"></div>
+                  <p class="help-text" style="margin-bottom:12px;">URLs de los webhooks de cada módulo:</p>
+                  <div class="webhook-row">
+                    <span class="webhook-label teal-text">● Catering</span>
+                    <input class="webhook-input" id="wh-catering" placeholder="/webhook/catering-assign" />
+                  </div>
+                  <div class="webhook-row">
+                    <span class="webhook-label blue-text">● Guardias envío</span>
+                    <input class="webhook-input" id="wh-guardias-send" placeholder="/webhook/guardias-send" />
+                  </div>
+                  <div class="webhook-row">
+                    <span class="webhook-label blue-text">● Guardias plan</span>
+                    <input class="webhook-input" id="wh-guardias-plan" placeholder="/webhook/guardias-plan" />
+                  </div>
+                  <div class="webhook-row">
+                    <span class="webhook-label amber-text">● Software</span>
+                    <input class="webhook-input" id="wh-software" placeholder="/webhook/software-assign" />
+                  </div>
+                  <div style="margin-top:16px;">
+                    <button class="btn btn-primary" onclick="saveConfig()"><i class="ti ti-device-floppy"></i> Guardar configuración</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-side">
+              <div class="card">
+                <div class="section-header"><div class="section-title">Cómo conectar n8n</div></div>
+                <div class="card-body">
+                  <div class="how-to-list">
+                    <div class="how-to-item"><div class="how-to-num">1</div><span>Arranca n8n: <code>npx n8n</code> o <code>n8n start</code></span></div>
+                    <div class="how-to-item"><div class="how-to-num">2</div><span>Crea los workflows con <strong>Webhook triggers</strong></span></div>
+                    <div class="how-to-item"><div class="how-to-num">3</div><span>Copia la URL base y los paths aquí</span></div>
+                    <div class="how-to-item"><div class="how-to-num">4</div><span>Pulsa "Verificar" para confirmar</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="section-header"><div class="section-title">Sesión actual</div></div>
+                <div class="card-body">
+                  <div class="config-row"><div class="config-label">Usuario</div><span id="session-user" class="muted-val">—</span></div>
+                  <div class="config-row" style="border-bottom:none;"><div class="config-label">Estado n8n</div><span id="session-n8n" class="muted-val">Desconectado</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /main -->
+  </div><!-- /app -->
+
+  <script src="js/n8n.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/demo-engine.js"></script>
+</body>
+</html>
