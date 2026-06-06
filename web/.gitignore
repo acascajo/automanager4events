@@ -1,0 +1,24 @@
+# Dependencias (si en el futuro se añade build/tooling)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Configuración local de editores / herramientas
+.vscode/
+.idea/
+
+# Sistema operativo
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Archivos temporales y logs
+*.log
+*.tmp
+_tfg_texto.txt
+
+# Datos sensibles / locales (no subir credenciales ni .xlsx reales)
+*.env
+.env*
+plantillas/*.xlsx
