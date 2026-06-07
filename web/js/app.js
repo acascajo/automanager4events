@@ -28,7 +28,7 @@ function gotoPage(page) {
 
 // ── Login / Logout ───────────────────────────────────────────────
 function doLogin() {
-  const user = document.getElementById('login-user').value.trim() || 'Admin';
+  const user = document.getElementById('login-user').value.trim() || 'prueba';
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('hidden');
 
@@ -161,14 +161,70 @@ function resetSteps(module) {
 // ── Lanzar workflow con n8n (o simularlo en modo demo) ───────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// ── Utilidades de meses / semanas (módulo de guardias) ───────────
+const MES_NUM = {
+  enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+  julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
+};
+const MES_ABR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function parseMes(valor) {
+  const [nombre, anyo] = (valor || '').toLowerCase().trim().split(/\s+/);
+  return { month: MES_NUM[nombre] || 0, year: Number(anyo) || 0 };
+}
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// Divide el mes en semanas (bloques de lunes a domingo) que solapan con él
+function weeksOfMonth(year, month) {
+  const dias = new Date(year, month, 0).getDate();
+  const weeks = [];
+  let cur = null;
+  for (let d = 1; d <= dias; d++) {
+    const dow = (new Date(year, month - 1, d).getDay() + 6) % 7; // 0=lunes … 6=domingo
+    if (cur === null || dow === 0) { cur = { start: d, end: d }; weeks.push(cur); }
+    else cur.end = d;
+  }
+  return weeks.map(w => ({ ...w, label: `${w.start}–${w.end} ${MES_ABR[month - 1]}` }));
+}
+// Fecha máxima de respuesta: 15 días antes del inicio del periodo
+function maxDeadline(year, month) {
+  const inicio = new Date(year, month - 1, 1);
+  inicio.setDate(inicio.getDate() - 15);
+  return inicio;
+}
+
+// Reconstruye los selectores de residentes por semana y ajusta la fecha límite
+function buildGuardiasWeeks() {
+  const sel  = document.getElementById('guardias-mes');
+  const cont = document.getElementById('guardias-weeks');
+  if (!sel || !cont) return;
+  const { year, month } = parseMes(sel.value);
+  if (!month) { cont.innerHTML = ''; return; }
+  cont.innerHTML = weeksOfMonth(year, month).map((w, i) => `
+    <div class="config-row">
+      <div><div class="config-label">Semana ${i + 1}</div><div class="config-sub">${w.label}</div></div>
+      <select class="config-select config-input-sm" data-week="${i + 1}">
+        <option value="1">1 residente</option>
+        <option value="2">2 residentes</option>
+      </select>
+    </div>`).join('');
+
+  // Corrección 3: fecha límite ≤ inicio del periodo − 15 días
+  const dl = document.getElementById('guardias-deadline');
+  if (dl) {
+    const maxIso = toISO(maxDeadline(year, month));
+    dl.max = maxIso;
+    if (!dl.value || dl.value > maxIso) dl.value = maxIso;
+  }
+}
+
 // Recoge los parámetros del formulario según el módulo
 function buildPayload(module) {
   if (module === 'catering') {
     return {
-      nombre:    document.getElementById('catering-nombre')?.value   || '',
-      vehiculos: document.getElementById('catering-vehiculos')?.value || 2,
-      motor:     document.getElementById('catering-motor')?.value     || 'auto',
-      email:     document.getElementById('catering-email')?.checked   || false,
+      // Los eventos, camareros y requisitos llegan en la plantilla; el motor es automático
+      email: document.getElementById('catering-email')?.checked || false,
     };
   }
   if (module === 'guardias-send') {
@@ -178,35 +234,35 @@ function buildPayload(module) {
     };
   }
   if (module === 'guardias-plan') {
+    const semanas = [...document.querySelectorAll('#guardias-weeks [data-week]')]
+      .map(s => ({ semana: Number(s.dataset.week), residentes: Number(s.value) }));
     return {
-      mes:    document.getElementById('guardias-mes')?.value    || '',
-      semana: document.getElementById('guardias-semana')?.value || '1',
-      finde:  document.getElementById('guardias-finde')?.value  || '2',
+      mes:     document.getElementById('guardias-mes')?.value || '',
+      semanas,
     };
   }
   if (module === 'software') {
-    return {
-      nombre: document.getElementById('software-nombre')?.value   || '',
-      // ?? (no ||): un checkbox desmarcado debe poder enviar false
-      skills: document.getElementById('software-skills')?.checked ?? true,
-      horas:  document.getElementById('software-horas')?.value    || 40,
-      umbral: document.getElementById('software-umbral')?.value   || 6,
-    };
+    // Equipo, proyectos y tareas (con todos sus parámetros) vienen en la plantilla
+    return {};
   }
   return {};
 }
 
 // Validación de campos obligatorios. Devuelve un mensaje de error o null.
 function validateModule(module) {
-  if (module === 'catering' && !document.getElementById('catering-nombre')?.value.trim()) {
-    return 'Introduce el nombre del evento antes de lanzar.';
-  }
-  if (module === 'software' && !document.getElementById('software-nombre')?.value.trim()) {
-    return 'Introduce el nombre del sprint o proyecto antes de lanzar.';
-  }
-  if ((module === 'guardias-send' || module === 'guardias-plan') &&
-      !document.getElementById('guardias-mes')?.value) {
-    return 'Selecciona el mes de planificación.';
+  // Catering y software: los datos vienen en la plantilla; el botón ya exige archivo subido.
+  if (module === 'guardias-send' || module === 'guardias-plan') {
+    const mesVal = document.getElementById('guardias-mes')?.value;
+    if (!mesVal) return 'Selecciona el mes de planificación.';
+    // Corrección 3: la fecha límite no puede ser posterior a 15 días antes del inicio
+    const dl = document.getElementById('guardias-deadline')?.value;
+    const { year, month } = parseMes(mesVal);
+    if (dl && month) {
+      const maxIso = toISO(maxDeadline(year, month));
+      if (dl > maxIso) {
+        return `La fecha límite debe ser como muy tarde el ${maxIso} (15 días antes del inicio del periodo).`;
+      }
+    }
   }
   return null;
 }
@@ -282,23 +338,27 @@ async function runWorkflow(module) {
 // Cada plantilla define sus hojas como [nombre, filas]. La primera fila es
 // la cabecera; la segunda, una fila de ejemplo para guiar al usuario.
 const TEMPLATES = {
-  // Catering: 3 hojas (disponibilidad, base de datos de camareros, eventos).
+  // Catering: 3 hojas (disponibilidad/encuesta, base de datos de camareros, eventos).
+  // Las columnas reproducen las hojas reales de Google Sheets del workflow.
   catering: {
     file: 'plantilla_catering.xlsx',
     sheets: [
       ['Disponibilidad', [
-        ['id_camarero', 'fecha', 'disponible'],
-        ['CAM-001', '2026-07-14', 'Sí'],
+        ['fecha_evento', 'telefono', 'nombre', 'disponible', 'tiene_coche', 'observaciones'],
+        ['2026-06-20', '672574623', 'Daniel García López', 'SI', 'NO', 'Puedo ir al montaje'],
       ]],
       ['Camareros', [
-        ['id_camarero', 'nombre', 'telefono', 'vehiculo_propio', 'activo', 'verificado',
-         'historial_eventos', 'score_fiable', 'score_prometedor', 'score_general', 'nota', 'observaciones'],
-        ['CAM-001', 'Laura García', '600111222', 'Sí', 'Sí', 'Sí', 12, 9.0, 8.5, 9.2, 9, 'Prefiere turnos de tarde'],
+        ['telefono', 'nombre', 'fecha_alta', 'antiguedad_dias', 'horas_trabajadas', 'nota',
+         'fecha_ultimo_evento', 'dias_desde_ultimo_evento', 'num_disponibilidades', 'num_respuestas',
+         'ratio_disponibilidad', 'activo', 'verificado', 'score_fiable', 'score_prometedor', 'score_general'],
+        ['625031064', 'Alicia Carmona Torres', '2021-04-14', 1970, 339, 9,
+         '2026-01-27', 131, 12, 16, 0.74, 'SI', 'SI', 0.95, 0.65, 0.85],
       ]],
       ['Eventos', [
-        ['id_evento', 'fecha', 'hora_inicio', 'hora_fin', 'tipo', 'nombre', 'ubicacion',
-         'asistentes', 'camareros_necesarios', 'prioridad'],
-        ['EVT-001', '2026-07-14', '19:00', '23:30', 'Gala', 'Gala Empresarial', 'Madrid Centro', 150, 6, 5],
+        ['event_id', 'fecha', 'hora_inicio', 'hora_fin', 'tipo', 'nombre_evento', 'ubicacion',
+         'asistentes', 'camareros_necesarios', 'estado', 'prioridad', 'observaciones'],
+        ['EVT001', '2026-06-20', '17:00', '23:00', 'boda', 'Boda Marta y Carlos', 'Finca Valdemorillo',
+         60, 6, 'NEW', 1, ''],
       ]],
     ],
   },
@@ -308,8 +368,8 @@ const TEMPLATES = {
     file: 'plantilla_guardias_medicos.xlsx',
     sheets: [
       ['Medicos', [
-        ['id_medico', 'nombre', 'email', 'anyo_residencia', 'rotacion', 'objetivo_guardias', 'activo'],
-        ['MED-001', 'Marta García', 'marta@example.com', 'R2', 'Cardiología', 8, 'Sí'],
+        ['medico_id', 'anio_residencia', 'nombre', 'email', 'activo'],
+        [1, 'R4', 'Iván', 'al364930@uji.es', 'sí'],
       ]],
     ],
   },
@@ -318,19 +378,18 @@ const TEMPLATES = {
     file: 'plantilla_software.xlsx',
     sheets: [
       ['Equipo', [
-        ['id_persona', 'nombre', 'rol', 'seniority', 'habilidades', 'capacidad_horas_semana',
-         'disponible', 'observaciones'],
-        ['DEV-001', 'Alejandro Vega', 'Backend', 'senior', 'Node.js;REST;Docker', 40, 'Sí', 'Lidera el equipo de API'],
+        ['persona_id', 'nombre', 'rol', 'seniority', 'skills', 'capacidad_horas', 'disponibilidad', 'observacion'],
+        ['P01', 'Ana', 'Frontend', 'Senior', 'React, TypeScript, CSS', 32, 'disponible', 'Buena para tareas críticas de frontend'],
       ]],
       ['Proyectos', [
-        ['id_proyecto', 'nombre', 'cliente', 'prioridad', 'fecha_inicio', 'deadline', 'estado', 'horas_estimadas'],
-        ['PRJ-001', 'Plataforma de pagos', 'Banco X', 5, '2026-07-01', '2026-08-15', 'activo', 320],
+        ['proyecto_id', 'nombre', 'cliente', 'prioridad', 'fecha_inicio', 'deadline', 'estado', 'horas_estimadas', 'observaciones'],
+        ['PR01', 'Portal Clientes', 'Cliente Bancario', 5, '2026-06-01', '2026-06-28', 'activo', 160, 'Proyecto más crítico del mes'],
       ]],
       ['Tareas', [
-        ['id_tarea', 'id_proyecto', 'nombre', 'descripcion', 'skills_requeridas', 'horas_estimadas',
-         'prioridad', 'deadline', 'dependencias', 'persona_preferida'],
-        ['TSK-001', 'PRJ-001', 'Refactor API Gateway', 'Rediseño del gateway de pagos',
-         'Node.js;REST', 20, 4, '2026-07-30', '', 'DEV-001'],
+        ['tarea_id', 'proyecto_id', 'nombre', 'descripcion', 'skills_requeridas', 'horas_estimadas',
+         'prioridad', 'deadline', 'dependencias', 'bloqueada', 'persona_preferida'],
+        ['T001', 'PR01', 'Diseño flujo login', 'Definir pantallas y flujo de acceso', 'UX, UI, Figma',
+         12, 5, '2026-06-05', '', 'no', 'Elena'],
       ]],
     ],
   },
@@ -359,13 +418,15 @@ function exportResults(module) {
   const wb = XLSX.utils.book_new();
 
   if (module === 'guardias') {
-    const rows = [['Día', 'Residente', 'Doblete']];
+    const rows = [['Día', 'Residente', 'Tipo de guardia']];
     Object.keys(GUARDIAS_JUL_2026)
       .map(Number)
       .sort((a, b) => a - b)
       .forEach(day => {
-        GUARDIAS_JUL_2026[day].forEach(e => {
-          rows.push([day, e.n, e.d ? 'Sí' : 'No']);
+        const g = GUARDIAS_JUL_2026[day];
+        const tipo = g.length > 1 ? 'Doble (2 residentes)' : 'Simple (1 residente)';
+        g.forEach(e => {
+          rows.push([day, e.n, tipo]);
         });
       });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Calendario');
@@ -435,42 +496,51 @@ function saveConfig() {
   alert('Configuración guardada correctamente.');
 }
 
-// ── Calendario de guardias (julio 2026) ──────────────────────────
-// Datos de ejemplo del calendario. Cada día → lista de { n: nombre, d: doblete }.
-// Al conectar n8n, este objeto se rellenaría con la respuesta del workflow.
-const GUARDIAS_JUL_2026 = {
-    1:  [{ n:'S. Ruiz', d:false }],
-    2:  [{ n:'J. López', d:false }],
-    3:  [{ n:'M. García', d:false }],
-    4:  [{ n:'P. Martín', d:false }],
-    5:  [{ n:'S. Ruiz', d:true }, { n:'J. López', d:true }],
-    6:  [{ n:'M. García', d:true }, { n:'P. Martín', d:true }],
-    7:  [{ n:'S. Ruiz', d:false }],
-    8:  [{ n:'M. García', d:false }],
-    9:  [{ n:'J. López', d:false }],
-    10: [{ n:'P. Martín', d:false }],
-    11: [{ n:'S. Ruiz', d:false }],
-    12: [{ n:'M. García', d:true }, { n:'J. López', d:true }],
-    13: [{ n:'P. Martín', d:true }, { n:'S. Ruiz', d:true }],
-    14: [{ n:'M. García', d:false }],
-    15: [{ n:'J. López', d:false }],
-    16: [{ n:'S. Ruiz', d:false }],
-    17: [{ n:'M. García', d:false }],
-    18: [{ n:'P. Martín', d:false }],
-    19: [{ n:'J. López', d:true }, { n:'S. Ruiz', d:true }],
-    20: [{ n:'M. García', d:true }, { n:'P. Martín', d:true }],
-    21: [{ n:'J. López', d:false }],
-    22: [{ n:'S. Ruiz', d:false }],
-    23: [{ n:'M. García', d:false }],
-    24: [{ n:'J. López', d:false }],
-    25: [{ n:'P. Martín', d:false }],
-    26: [{ n:'S. Ruiz', d:true }, { n:'M. García', d:true }],
-    27: [{ n:'J. López', d:true }, { n:'P. Martín', d:true }],
-    28: [{ n:'S. Ruiz', d:false }],
-    29: [{ n:'M. García', d:false }],
-    30: [{ n:'J. López', d:false }],
-    31: [{ n:'P. Martín', d:false }],
-};
+// ── Calendario de guardias ────────────────────────────────────────
+// Se genera a partir de los 12 médicos (demo-data.js) y la distribución por
+// semanas: las semanas indicadas en `semanas_dobles` llevan 2 residentes/día
+// (guardia doble) y el resto 1 residente/día. La generación respeta:
+//   · R8 — los R2 solo hacen guardias dobles (nunca un día de 1 residente)
+//   · R7 — en una guardia doble nunca coinciden dos R2
+//   · R4 — ningún médico hace guardia dos días seguidos
+// (Una "guardia doble" = 2 residentes ese día; NO es un "doblete", que es un
+//  médico que hace guardia, libra un día y vuelve a hacer guardia.)
+function generarCalendarioGuardias(year, month, medicos, semanasDobles) {
+  const esDoble = {};
+  weeksOfMonth(year, month).forEach((w, i) => {
+    const doble = semanasDobles.includes(i + 1);
+    for (let d = w.start; d <= w.end; d++) esDoble[d] = doble;
+  });
+  const dias = new Date(year, month, 0).getDate();
+  const r2   = medicos.filter(m => m.anyo === 'R2');
+  const noR2 = medicos.filter(m => m.anyo !== 'R2');
+  const count = {}, last = {};
+  medicos.forEach(m => { count[m.cal] = 0; last[m.cal] = -10; });
+  // Elige el candidato con menos guardias y que lleve más tiempo sin hacerla,
+  // excluyendo a quien hizo guardia el día anterior (evita días consecutivos)
+  const pick = (pool, day) => {
+    const cand = pool
+      .filter(m => last[m.cal] !== day - 1)
+      .sort((a, b) => count[a.cal] - count[b.cal] || last[a.cal] - last[b.cal]);
+    return (cand[0] || pool[0]);
+  };
+  const cal = {};
+  for (let d = 1; d <= dias; d++) {
+    const elegidos = [];
+    if (esDoble[d]) {
+      elegidos.push(pick(r2, d));     // 1 R2 (R7: solo uno; R8: R2 solo en dobles)
+      elegidos.push(pick(noR2, d));   // + 1 no-R2
+    } else {
+      elegidos.push(pick(noR2, d));   // día simple: solo no-R2
+    }
+    cal[d] = elegidos.map(m => ({ n: m.cal }));
+    elegidos.forEach(m => { count[m.cal]++; last[m.cal] = d; });
+  }
+  return cal;
+}
+
+const GUARDIAS_JUL_2026 = generarCalendarioGuardias(
+  DEMO_GUARDIAS.anio, DEMO_GUARDIAS.mes, DEMO_GUARDIAS.medicos, DEMO_GUARDIAS.semanas_dobles);
 
 function buildCalendar() {
   const container = document.getElementById('calendar-jul-2026');
@@ -519,6 +589,38 @@ function initGotoLinks() {
   });
 }
 
+// Rellena la tabla de médicos y el panel de respuestas desde los datos de demo
+function renderGuardiasMedicos() {
+  if (typeof DEMO_GUARDIAS === 'undefined') return;
+  const meds = DEMO_GUARDIAS.medicos;
+  const colors = ['blue', 'teal', 'amber', 'coral'];
+  const tbody = document.getElementById('guardias-medicos-tbody');
+  if (tbody) {
+    tbody.innerHTML = meds.map((m, i) => `
+      <tr>
+        <td><div class="person-cell"><div class="avatar ${colors[i % colors.length]}">${(m.nombre[0] || '').toUpperCase()}</div>${m.nombre}</div></td>
+        <td>${m.anyo}</td>
+        <td>${m.rotacion}</td>
+        <td>${m.objetivo}</td>
+        <td><span class="badge badge-ok">Activo</span></td>
+      </tr>`).join('');
+  }
+  // Estado de respuestas (demo): todos menos los 2 últimos han respondido
+  const total = meds.length;
+  const recibidas = Math.max(0, total - 2);
+  const cont = document.getElementById('guardias-respuestas');
+  if (cont) {
+    cont.innerHTML = meds.map((m, i) =>
+      `<div class="response-row"><span>${m.nombre}</span>${
+        i < recibidas ? '<span class="badge badge-ok">Recibida</span>'
+                      : '<span class="badge badge-warn">Pendiente</span>'}</div>`).join('');
+  }
+  const bar = document.getElementById('guardias-respuestas-bar');
+  if (bar) bar.style.width = Math.round(recibidas / total * 100) + '%';
+  const txt = document.getElementById('guardias-respuestas-txt');
+  if (txt) txt.textContent = `${recibidas} de ${total} residentes han respondido`;
+}
+
 // ── Inicialización ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -550,6 +652,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Construir calendario
   buildCalendar();
+
+  // Guardias: residentes por semana + fecha límite según el mes elegido
+  const mesSel = document.getElementById('guardias-mes');
+  if (mesSel) mesSel.addEventListener('change', buildGuardiasWeeks);
+  buildGuardiasWeeks();
+
+  // Tabla de médicos y estado de respuestas (12 residentes)
+  renderGuardiasMedicos();
 
   // Pre-rellenar las pestañas de resultados con el motor de demo
   if (window.DEMO) DEMO.init();
