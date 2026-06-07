@@ -193,6 +193,26 @@ function maxDeadline(year, month) {
   inicio.setDate(inicio.getDate() - 15);
   return inicio;
 }
+const MES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function addDias(iso, n) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return toISO(d);
+}
+function fechaLarga(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} de ${MES_LARGO[m - 1]} de ${y}`;
+}
+// Mensaje tras enviar solicitudes: los resultados estarán el día siguiente a la fecha límite
+function mensajeSolicitudesEnviadas(demo) {
+  const dl = document.getElementById('guardias-deadline')?.value;
+  const disp = dl ? fechaLarga(addDias(dl, 1)) : 'el día siguiente a la fecha límite';
+  const lim = dl ? fechaLarga(dl) : 'la fecha límite';
+  return `${demo ? '<strong>Modo demo:</strong> ' : ''}✓ Solicitudes de disponibilidad enviadas a los residentes. ` +
+    `Las respuestas se recogen y procesan automáticamente. ` +
+    `Los <strong>resultados estarán disponibles el ${disp}</strong> (día siguiente a la fecha límite, ${lim}).`;
+}
 
 // Reconstruye los selectores de residentes por semana y ajusta la fecha límite
 function buildGuardiasWeeks() {
@@ -228,16 +248,15 @@ function buildPayload(module) {
     };
   }
   if (module === 'guardias-send') {
-    return {
-      mes:      document.getElementById('guardias-mes')?.value      || '',
-      deadline: document.getElementById('guardias-deadline')?.value || '',
-    };
-  }
-  if (module === 'guardias-plan') {
+    // Un solo clic establece el periodo completo: el mes, la fecha límite y la
+    // distribución de residentes por semana. n8n envía los correos al instante y,
+    // con un trigger nocturno, recoge/procesa las respuestas y genera el calendario
+    // automáticamente tras la fecha límite.
     const semanas = [...document.querySelectorAll('#guardias-weeks [data-week]')]
       .map(s => ({ semana: Number(s.dataset.week), residentes: Number(s.value) }));
     return {
-      mes:     document.getElementById('guardias-mes')?.value || '',
+      mes:      document.getElementById('guardias-mes')?.value      || '',
+      deadline: document.getElementById('guardias-deadline')?.value || '',
       semanas,
     };
   }
@@ -251,7 +270,7 @@ function buildPayload(module) {
 // Validación de campos obligatorios. Devuelve un mensaje de error o null.
 function validateModule(module) {
   // Catering y software: los datos vienen en la plantilla; el botón ya exige archivo subido.
-  if (module === 'guardias-send' || module === 'guardias-plan') {
+  if (module === 'guardias-send') {
     const mesVal = document.getElementById('guardias-mes')?.value;
     if (!mesVal) return 'Selecciona el mes de planificación.';
     // Corrección 3: la fecha límite no puede ser posterior a 15 días antes del inicio
@@ -309,9 +328,14 @@ async function runWorkflow(module) {
     const result = await N8N.call(module, payload);
     if (runBtn) runBtn.disabled = false;
     if (result.ok) {
+      if (module === 'guardias-send') {
+        // Los correos se envían al instante; n8n procesa de madrugada y genera tras la fecha límite
+        setStatus(mensajeSolicitudesEnviadas(false));
+        return;
+      }
       setStatus('✓ Workflow ejecutado correctamente. Revisa la pestaña Resultados.');
       await animateSteps(base);
-      if (module !== 'guardias-send') showResults(base);
+      showResults(base);
     } else {
       setStatus(`✗ Error: ${result.error}`);
     }
@@ -319,15 +343,17 @@ async function runWorkflow(module) {
   }
 
   // 3. Sin n8n → modo demo: simula la ejecución con datos de ejemplo
+  if (module === 'guardias-send') {
+    setStatus('<span class="spinner"></span> Enviando solicitudes…');
+    await sleep(800);
+    if (runBtn) runBtn.disabled = false;
+    setStatus(mensajeSolicitudesEnviadas(true));
+    return;
+  }
+
   setStatus('<span class="spinner"></span> Modo demo (n8n no conectado) — simulando ejecución…');
   await animateSteps(base);
   if (runBtn) runBtn.disabled = false;
-
-  if (module === 'guardias-send') {
-    setStatus('✓ <strong>Modo demo:</strong> solicitudes preparadas. Conecta n8n en ' +
-              '<strong>Configuración</strong> para enviarlas por email.');
-    return;
-  }
   setStatus('✓ <strong>Modo demo:</strong> mostrando resultados de ejemplo. ' +
             'Conecta n8n en <strong>Configuración</strong> para datos reales.');
   if (window.DEMO) DEMO.run(base);   // recalcula y renderiza con el motor de demo
@@ -489,7 +515,6 @@ function saveConfig() {
   const webhooks = {
     'catering':      document.getElementById('wh-catering')?.value      || '',
     'guardias-send': document.getElementById('wh-guardias-send')?.value  || '',
-    'guardias-plan': document.getElementById('wh-guardias-plan')?.value  || '',
     'software':      document.getElementById('wh-software')?.value       || '',
   };
   N8N.saveConfig(baseUrl, webhooks);

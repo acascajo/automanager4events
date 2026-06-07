@@ -19,7 +19,6 @@ const N8N = (() => {
     webhooks:  {
       'catering':      '/webhook/catering-assign',
       'guardias-send': '/webhook/guardias-send',
-      'guardias-plan': '/webhook/guardias-plan',
       'software':      '/webhook/software-assign',
     }
   };
@@ -55,7 +54,6 @@ const N8N = (() => {
     const map = {
       'wh-catering':      'catering',
       'wh-guardias-send': 'guardias-send',
-      'wh-guardias-plan': 'guardias-plan',
       'wh-software':      'software',
     };
     Object.entries(map).forEach(([inputId, key]) => {
@@ -169,7 +167,6 @@ const N8N = (() => {
     const map = {
       'wh-catering':      '/webhook/catering-assign',
       'wh-guardias-send': '/webhook/guardias-send',
-      'wh-guardias-plan': '/webhook/guardias-plan',
       'wh-software':      '/webhook/software-assign',
     };
     Object.entries(map).forEach(([id, path]) => {

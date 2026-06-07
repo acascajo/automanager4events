@@ -260,9 +260,12 @@ envían el `payload` real al webhook correspondiente.
    | Módulo | Método | Path sugerido |
    |--------|--------|---------------|
    | Catering | POST | `/webhook/catering-assign` |
-   | Guardias — envío | POST | `/webhook/guardias-send` |
-   | Guardias — planificación | POST | `/webhook/guardias-plan` |
+   | Guardias — envío de solicitudes | POST | `/webhook/guardias-send` |
    | Software | POST | `/webhook/software-assign` |
+
+   > En guardias, la **recogida de respuestas** y la **generación del calendario**
+   > no se exponen como webhook: las ejecuta n8n con un **Schedule Trigger**
+   > (nocturno) que procesa los correos y genera el calendario tras la fecha límite.
 
 3. En la app ve a **Configuración**, introduce `http://localhost:5678` y pulsa **Verificar**. Las rutas se rellenarán automáticamente.
 
@@ -297,18 +300,15 @@ envían el `payload` real al webhook correspondiente.
 }
 ```
 
-**Guardias — envío de solicitudes** (la fecha límite debe ser ≥ 15 días antes del inicio del periodo)
+**Guardias — envío de solicitudes** (un solo clic). Envía los correos al instante y
+fija toda la configuración del periodo. La fecha límite debe ser ≥ 15 días antes del
+inicio. La recogida/procesado de respuestas y la generación del calendario las realiza
+n8n automáticamente (trigger nocturno) tras la fecha límite; los resultados quedan
+disponibles el **día siguiente a la fecha límite**.
 ```json
 {
   "mes":      "Julio 2026",
-  "deadline": "2026-06-16"
-}
-```
-
-**Guardias — generación de calendario** (residentes por semana, elegidos en la interfaz)
-```json
-{
-  "mes": "Julio 2026",
+  "deadline": "2026-06-16",
   "semanas": [
     { "semana": 1, "residentes": 1 },
     { "semana": 2, "residentes": 2 },

@@ -322,9 +322,8 @@
                     </div>
                   </div>
                   <div class="run-footer">
-                    <div class="run-status" id="guardias-run-status">Configura el periodo antes de enviar</div>
-                    <button class="btn" onclick="runWorkflow('guardias-send')"><i class="ti ti-mail"></i> Enviar solicitudes</button>
-                    <button class="btn btn-primary" onclick="runWorkflow('guardias-plan')"><i class="ti ti-bolt"></i> Generar calendario</button>
+                    <div class="run-status" id="guardias-run-status">Configura el periodo y envía las solicitudes</div>
+                    <button class="btn btn-primary" onclick="runWorkflow('guardias-send')"><i class="ti ti-mail"></i> Enviar solicitudes</button>
                   </div>
                 </div>
               </div>
@@ -346,9 +345,9 @@
                     <div class="step-list" id="guardias-steps">
                       <div class="step-item"><div class="step-num step-done"><i class="ti ti-check"></i></div><div class="step-content"><div class="step-label">Cargar médicos</div><div class="step-sub">12 residentes en BD</div></div></div>
                       <div class="step-item"><div class="step-num step-done"><i class="ti ti-check"></i></div><div class="step-content"><div class="step-label">Enviar solicitudes</div><div class="step-sub">Correos enviados el 5 jun</div></div></div>
-                      <div class="step-item"><div class="step-num step-active">3</div><div class="step-content"><div class="step-label">Recoger respuestas</div><div class="step-sub">10/12 recibidas</div></div></div>
-                      <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-label">Generar calendario</div><div class="step-sub">Solver CSP con restricciones</div></div></div>
-                      <div class="step-item"><div class="step-num">5</div><div class="step-content"><div class="step-label">Publicar resultados</div></div></div>
+                      <div class="step-item"><div class="step-num step-active">3</div><div class="step-content"><div class="step-label">Recoger respuestas</div><div class="step-sub">Automático cada madrugada · 10/12</div></div></div>
+                      <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-label">Generar calendario</div><div class="step-sub">Automático tras la fecha límite (solver CSP)</div></div></div>
+                      <div class="step-item"><div class="step-num">5</div><div class="step-content"><div class="step-label">Publicar resultados</div><div class="step-sub">El día siguiente a la fecha límite</div></div></div>
                     </div>
                   </div>
                 </div>
@@ -582,10 +581,6 @@
                   <div class="webhook-row">
                     <span class="webhook-label blue-text">● Guardias envío</span>
                     <input class="webhook-input" id="wh-guardias-send" placeholder="/webhook/guardias-send" />
-                  </div>
-                  <div class="webhook-row">
-                    <span class="webhook-label blue-text">● Guardias plan</span>
-                    <input class="webhook-input" id="wh-guardias-plan" placeholder="/webhook/guardias-plan" />
                   </div>
                   <div class="webhook-row">
                     <span class="webhook-label amber-text">● Software</span>
