@@ -64,7 +64,7 @@ SmartAssign combina cuatro capas tecnológicas:
 **Flujo completo** (3 workflows independientes):
 
 **Workflow 1 — Envío de solicitudes**:
-- El usuario configura el periodo (mes, fecha límite, distribución de guardias por día).
+- El usuario configura el periodo: mes, fecha límite de respuesta (al menos 15 días antes del inicio) y, por cada semana del mes, si las guardias necesitan 1 o 2 residentes.
 - El sistema identifica los médicos activos y envía correos personalizados según su año de residencia, solicitando disponibilidades, preferencias, rotación clínica y objetivos de guardias.
 
 **Workflow 2 — Recogida de respuestas**:
@@ -290,41 +290,38 @@ envían el `payload` real al webhook correspondiente.
 
 ### Payloads que envía la app a cada webhook
 
-**Catering**
+**Catering** — los eventos, camareros y requisitos llegan en la plantilla; el motor (LLM + fallback heurístico) es automático
 ```json
 {
-  "nombre":    "Gala julio 2026",
-  "vehiculos": 2,
-  "motor":     "auto | llm | heuristic",
-  "email":     false
+  "email": false
 }
 ```
 
-**Guardias — envío de solicitudes**
+**Guardias — envío de solicitudes** (la fecha límite debe ser ≥ 15 días antes del inicio del periodo)
 ```json
 {
   "mes":      "Julio 2026",
-  "deadline": "2026-06-20"
+  "deadline": "2026-06-16"
 }
 ```
 
-**Guardias — generación de calendario**
+**Guardias — generación de calendario** (residentes por semana, elegidos en la interfaz)
 ```json
 {
-  "mes":    "Julio 2026",
-  "semana": "1",
-  "finde":  "2"
+  "mes": "Julio 2026",
+  "semanas": [
+    { "semana": 1, "residentes": 1 },
+    { "semana": 2, "residentes": 2 },
+    { "semana": 3, "residentes": 1 },
+    { "semana": 4, "residentes": 2 },
+    { "semana": 5, "residentes": 1 }
+  ]
 }
 ```
 
-**Software**
+**Software** — equipo, proyectos y tareas (con capacidad, skills, prioridad, deadlines, dependencias y persona preferida) vienen en la plantilla; no hay parámetros que enviar
 ```json
-{
-  "nombre": "Sprint 15",
-  "skills": true,
-  "horas":  40,
-  "umbral": 6
-}
+{}
 ```
 
 ---

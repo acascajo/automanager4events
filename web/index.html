@@ -22,7 +22,7 @@
       <div class="login-logo">SmartAssign</div>
       <div class="login-logo-sub">plataforma de asignación v1.0</div>
       <label class="login-label">Usuario</label>
-      <input class="login-input" type="text" id="login-user" placeholder="admin" />
+      <input class="login-input" type="text" id="login-user" placeholder="prueba" />
       <label class="login-label">Contraseña</label>
       <input class="login-input" type="password" id="login-pass" placeholder="••••••••" />
       <button class="btn btn-primary login-btn" id="login-btn">
@@ -147,7 +147,7 @@
             </div>
             <div class="exec-row">
               <span class="badge badge-guardias">Guardias</span>
-              <div class="exec-info"><div class="exec-name">Planificación julio 2026</div><div class="exec-meta">Ayer · 8 residentes · 31 días</div></div>
+              <div class="exec-info"><div class="exec-name">Planificación julio 2026</div><div class="exec-meta">Ayer · 12 residentes · sem. 2 y 4 con 2 residentes/día</div></div>
               <span class="badge badge-ok">Completado</span>
             </div>
             <div class="exec-row">
@@ -198,24 +198,9 @@
                   </div>
                 </div>
                 <div class="card">
-                  <div class="section-header"><div class="section-title">Configuración del evento</div></div>
+                  <div class="section-header"><div class="section-title">Parámetros de ejecución</div></div>
                   <div class="card-body">
-                    <div class="config-row">
-                      <div><div class="config-label">Nombre del evento</div><div class="config-sub">Identificador para el historial</div></div>
-                      <input class="config-input" type="text" id="catering-nombre" placeholder="Gala julio 2026" />
-                    </div>
-                    <div class="config-row">
-                      <div><div class="config-label">Mínimo camareros con vehículo</div><div class="config-sub">Por evento con ubicación remota</div></div>
-                      <input class="config-input config-input-sm" type="number" id="catering-vehiculos" value="2" />
-                    </div>
-                    <div class="config-row">
-                      <div><div class="config-label">Motor de asignación</div><div class="config-sub">LLM con fallback heurístico</div></div>
-                      <select class="config-select" id="catering-motor">
-                        <option value="auto">Automático (recomendado)</option>
-                        <option value="llm">Solo LLM</option>
-                        <option value="heuristic">Solo heurístico</option>
-                      </select>
-                    </div>
+                    <p class="help-text">Los eventos, sus requisitos (camareros necesarios, prioridad, vehículos…) y los camareros se definen en la plantilla. El motor de asignación (LLM con fallback heurístico) es automático.</p>
                     <div class="config-row">
                       <div><div class="config-label">Notificar asignaciones por email</div><div class="config-sub">Envía confirmación a los camareros</div></div>
                       <input type="checkbox" id="catering-email" />
@@ -314,12 +299,7 @@
                   </div>
                   <table class="data-table">
                     <thead><tr><th>Residente</th><th>Año</th><th>Rotación</th><th>Obj. guardias</th><th>Estado</th></tr></thead>
-                    <tbody>
-                      <tr><td><div class="person-cell"><div class="avatar blue">MG</div>Marta García</div></td><td>R2</td><td>Cardiología</td><td>8</td><td><span class="badge badge-ok">Activa</span></td></tr>
-                      <tr><td><div class="person-cell"><div class="avatar teal">JL</div>Juan López</div></td><td>R1</td><td>Urgencias</td><td>6</td><td><span class="badge badge-ok">Activo</span></td></tr>
-                      <tr><td><div class="person-cell"><div class="avatar amber">SR</div>Sara Ruiz</div></td><td>R3</td><td>UCI</td><td>10</td><td><span class="badge badge-ok">Activa</span></td></tr>
-                      <tr><td><div class="person-cell"><div class="avatar coral">PM</div>Pedro Martín</div></td><td>R2</td><td>Medicina interna</td><td>8</td><td><span class="badge badge-warn">Rotación</span></td></tr>
-                    </tbody>
+                    <tbody id="guardias-medicos-tbody"></tbody>
                   </table>
                 </div>
                 <div class="card">
@@ -328,20 +308,17 @@
                     <div class="config-row">
                       <div><div class="config-label">Mes de planificación</div></div>
                       <select class="config-select" id="guardias-mes">
-                        <option>Julio 2026</option><option>Agosto 2026</option>
+                        <option>Julio 2026</option><option>Agosto 2026</option><option>Septiembre 2026</option>
                       </select>
                     </div>
                     <div class="config-row">
-                      <div><div class="config-label">Fecha límite de respuesta</div><div class="config-sub">Plazo para recibir disponibilidades</div></div>
-                      <input class="config-input" type="date" id="guardias-deadline" value="2026-06-20" />
+                      <div><div class="config-label">Fecha límite de respuesta</div><div class="config-sub">Mínimo 15 días antes del inicio del periodo</div></div>
+                      <input class="config-input" type="date" id="guardias-deadline" />
                     </div>
-                    <div class="config-row">
-                      <div><div class="config-label">Guardias/día entre semana</div></div>
-                      <select class="config-select" id="guardias-semana"><option value="1">1 residente</option><option value="2">2 residentes</option></select>
-                    </div>
-                    <div class="config-row">
-                      <div><div class="config-label">Guardias/día festivo o fin de semana</div></div>
-                      <select class="config-select" id="guardias-finde"><option value="2">2 residentes</option><option value="1">1 residente</option></select>
+                    <div style="padding:12px 0 4px;">
+                      <div class="config-label">Residentes por guardia, por semana</div>
+                      <div class="config-sub" style="margin-bottom:10px;">Indica cuántos residentes necesita cada semana del mes (1 o 2)</div>
+                      <div id="guardias-weeks"></div>
                     </div>
                   </div>
                   <div class="run-footer">
@@ -357,24 +334,19 @@
                   <div class="card-body">
                     <div style="margin-bottom:12px;">
                       <div class="help-text" style="margin-bottom:6px;">Respuestas recibidas</div>
-                      <div class="progress-track"><div class="progress-bar" style="width:75%;"></div></div>
-                      <div class="muted-text" style="margin-top:4px;font-size:11px;">3 de 4 residentes han respondido</div>
+                      <div class="progress-track"><div class="progress-bar" id="guardias-respuestas-bar" style="width:0;"></div></div>
+                      <div class="muted-text" id="guardias-respuestas-txt" style="margin-top:4px;font-size:11px;"></div>
                     </div>
-                    <div class="response-list">
-                      <div class="response-row"><span>Marta García</span><span class="badge badge-ok">Recibida</span></div>
-                      <div class="response-row"><span>Juan López</span><span class="badge badge-ok">Recibida</span></div>
-                      <div class="response-row"><span>Sara Ruiz</span><span class="badge badge-ok">Recibida</span></div>
-                      <div class="response-row"><span>Pedro Martín</span><span class="badge badge-warn">Pendiente</span></div>
-                    </div>
+                    <div class="response-list" id="guardias-respuestas"></div>
                   </div>
                 </div>
                 <div class="card">
                   <div class="section-header"><div class="section-title">Progreso del flujo</div></div>
                   <div class="card-body">
                     <div class="step-list" id="guardias-steps">
-                      <div class="step-item"><div class="step-num step-done"><i class="ti ti-check"></i></div><div class="step-content"><div class="step-label">Cargar médicos</div><div class="step-sub">4 residentes en BD</div></div></div>
+                      <div class="step-item"><div class="step-num step-done"><i class="ti ti-check"></i></div><div class="step-content"><div class="step-label">Cargar médicos</div><div class="step-sub">12 residentes en BD</div></div></div>
                       <div class="step-item"><div class="step-num step-done"><i class="ti ti-check"></i></div><div class="step-content"><div class="step-label">Enviar solicitudes</div><div class="step-sub">Correos enviados el 5 jun</div></div></div>
-                      <div class="step-item"><div class="step-num step-active">3</div><div class="step-content"><div class="step-label">Recoger respuestas</div><div class="step-sub">3/4 recibidas</div></div></div>
+                      <div class="step-item"><div class="step-num step-active">3</div><div class="step-content"><div class="step-label">Recoger respuestas</div><div class="step-sub">10/12 recibidas</div></div></div>
                       <div class="step-item"><div class="step-num">4</div><div class="step-content"><div class="step-label">Generar calendario</div><div class="step-sub">Solver CSP con restricciones</div></div></div>
                       <div class="step-item"><div class="step-num">5</div><div class="step-content"><div class="step-label">Publicar resultados</div></div></div>
                     </div>
@@ -472,24 +444,9 @@
                   </div>
                 </div>
                 <div class="card">
-                  <div class="section-header"><div class="section-title">Parámetros de asignación</div></div>
+                  <div class="section-header"><div class="section-title">Ejecución</div></div>
                   <div class="card-body">
-                    <div class="config-row">
-                      <div><div class="config-label">Nombre del sprint / proyecto</div></div>
-                      <input class="config-input" type="text" id="software-nombre" placeholder="Sprint 15" />
-                    </div>
-                    <div class="config-row">
-                      <div><div class="config-label">Priorizar encaje de habilidades</div><div class="config-sub">El LLM pondera el match de skills</div></div>
-                      <input type="checkbox" id="software-skills" checked />
-                    </div>
-                    <div class="config-row">
-                      <div><div class="config-label">Límite de horas por persona</div></div>
-                      <input class="config-input config-input-sm" type="number" id="software-horas" value="40" />
-                    </div>
-                    <div class="config-row">
-                      <div><div class="config-label">Umbral mínimo de score</div><div class="config-sub">Por debajo → advertencia</div></div>
-                      <input class="config-input config-input-sm" type="number" id="software-umbral" value="6" />
-                    </div>
+                    <p class="help-text">El equipo (con su capacidad horaria), los proyectos y las tareas (skills, prioridad, deadlines, dependencias y persona preferida) se definen en la plantilla. No hay nada más que configurar: sube el archivo y lanza.</p>
                   </div>
                   <div class="run-footer">
                     <div class="run-status" id="software-run-status">Sube el archivo para continuar</div>
@@ -586,10 +543,10 @@
           <div class="card">
             <div class="section-header"><div class="section-title">24 ejecuciones registradas</div></div>
             <div class="history-row" data-module="catering"><span class="history-id">CAT-014</span><span class="badge badge-catering">Catering</span><div class="exec-info"><div class="exec-name">Gala Madrid · 14 jun 2026</div><div class="exec-meta">06/06/2026 · 12 asignados · 2 avisos</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
-            <div class="history-row" data-module="guardias"><span class="history-id">MED-007</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Julio 2026</div><div class="exec-meta">05/06/2026 · 4 residentes · 31 días</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
+            <div class="history-row" data-module="guardias"><span class="history-id">MED-007</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Julio 2026</div><div class="exec-meta">05/06/2026 · 12 residentes · sem. 2 y 4 con 2 residentes/día</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
             <div class="history-row" data-module="software"><span class="history-id">SW-011</span><span class="badge badge-software">Software</span><div class="exec-info"><div class="exec-name">Sprint 14 — Backend</div><div class="exec-meta">03/06/2026 · 6 tareas · 4 devs</div></div><span class="badge badge-warn">2 avisos</span><button class="btn btn-sm">Ver</button></div>
             <div class="history-row" data-module="catering"><span class="history-id">CAT-013</span><span class="badge badge-catering">Catering</span><div class="exec-info"><div class="exec-name">Cóctel corporativo · 28 may</div><div class="exec-meta">25/05/2026 · 8 asignados · 0 avisos</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
-            <div class="history-row" data-module="guardias"><span class="history-id">MED-006</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Junio 2026</div><div class="exec-meta">28/05/2026 · 4 residentes · 30 días</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
+            <div class="history-row" data-module="guardias"><span class="history-id">MED-006</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Junio 2026</div><div class="exec-meta">28/05/2026 · 12 residentes · sem. 1 y 3 con 2 residentes/día</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
           </div>
         </div>
 

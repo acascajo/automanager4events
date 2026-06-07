@@ -36,15 +36,28 @@ const DEMO_CATERING = {
 // Los nombres coinciden con los del calendario (GUARDIAS_JUL_2026) para poder
 // cruzar asignaciones con objetivos. no_puedo / preferiria_librar permiten
 // ejercer el validador de restricciones blandas.
+// 12 médicos (4 R4, 4 R3, 4 R2), como la plantilla real. La rotación y el
+// objetivo de guardias se extraen de las respuestas por correo (aquí, ya extraídos).
 const DEMO_GUARDIAS = {
   periodo: 'Julio 2026',
+  anio: 2026,
+  mes: 7,
   dias_periodo: 31,
-  distribucion: { entre_semana: 1, finde_festivo: 2 },
+  // Semanas que necesitan 2 residentes/día (guardia doble); el resto, 1 residente/día
+  semanas_dobles: [2, 4],
   medicos: [
-    { id: 'MED-001', cal: 'M. García', nombre: 'Marta García',  email: 'marta@hosp.es',  anyo: 'R2', rotacion: 'Cardiología',      objetivo: 8,  no_puedo: ['2026-07-10'],              preferiria_librar: ['2026-07-25'] },
-    { id: 'MED-002', cal: 'J. López',  nombre: 'Juan López',     email: 'juan@hosp.es',   anyo: 'R1', rotacion: 'Urgencias',        objetivo: 6,  no_puedo: [],                          preferiria_librar: [] },
-    { id: 'MED-003', cal: 'S. Ruiz',   nombre: 'Sara Ruiz',      email: 'sara@hosp.es',   anyo: 'R3', rotacion: 'UCI',              objetivo: 10, no_puedo: [],                          preferiria_librar: ['2026-07-26'] },
-    { id: 'MED-004', cal: 'P. Martín', nombre: 'Pedro Martín',   email: 'pedro@hosp.es',  anyo: 'R2', rotacion: 'Medicina interna', objetivo: 8,  no_puedo: ['2026-07-09'],              preferiria_librar: [] },
+    { id: 1,  anyo: 'R4', cal: 'Iván',    nombre: 'Iván',    email: 'ivan@hosp.es',    rotacion: 'Cardiología',      objetivo: 2, no_puedo: [], preferiria_librar: [] },
+    { id: 2,  anyo: 'R4', cal: 'Vega',    nombre: 'Vega',    email: 'vega@hosp.es',    rotacion: 'Neurología',       objetivo: 4, no_puedo: [], preferiria_librar: [] },
+    { id: 3,  anyo: 'R4', cal: 'Fabi',    nombre: 'Fabi',    email: 'fabi@hosp.es',    rotacion: 'Digestivo',        objetivo: 4, no_puedo: [], preferiria_librar: ['2026-07-15'] },
+    { id: 4,  anyo: 'R4', cal: 'Bea',     nombre: 'Bea',     email: 'bea@hosp.es',     rotacion: 'Cardiología',      objetivo: 4, no_puedo: [], preferiria_librar: [] },
+    { id: 5,  anyo: 'R3', cal: 'Guille',  nombre: 'Guille',  email: 'guille@hosp.es',  rotacion: 'UCI',              objetivo: 4, no_puedo: [], preferiria_librar: [] },
+    { id: 6,  anyo: 'R3', cal: 'Antonio', nombre: 'Antonio', email: 'antonio@hosp.es', rotacion: 'Urgencias',        objetivo: 4, no_puedo: [], preferiria_librar: [] },
+    { id: 7,  anyo: 'R3', cal: 'Alba',    nombre: 'Alba',    email: 'alba@hosp.es',    rotacion: 'Neumología',       objetivo: 4, no_puedo: [], preferiria_librar: [] },
+    { id: 8,  anyo: 'R3', cal: 'Pilar',   nombre: 'Pilar',   email: 'pilar@hosp.es',   rotacion: 'UCI',              objetivo: 6, no_puedo: [], preferiria_librar: [] },
+    { id: 9,  anyo: 'R2', cal: 'Paula',   nombre: 'Paula',   email: 'paula@hosp.es',   rotacion: 'Medicina interna', objetivo: 4, no_puedo: [], preferiria_librar: [] },
+    { id: 10, anyo: 'R2', cal: 'Javi',    nombre: 'Javi',    email: 'javi@hosp.es',    rotacion: 'Medicina interna', objetivo: 4, no_puedo: [], preferiria_librar: [] },
+    { id: 11, anyo: 'R2', cal: 'Jaime',   nombre: 'Jaime',   email: 'jaime@hosp.es',   rotacion: 'Cirugía',          objetivo: 3, no_puedo: [], preferiria_librar: [] },
+    { id: 12, anyo: 'R2', cal: 'Rodrigo', nombre: 'Rodrigo', email: 'rodrigo@hosp.es', rotacion: 'Cirugía',          objetivo: 3, no_puedo: [], preferiria_librar: [] },
   ],
 };
 
