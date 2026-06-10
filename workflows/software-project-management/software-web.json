@@ -8,10 +8,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        752,
-        0
+        736,
+        -80
       ],
-      "id": "16f0cb9a-39b7-4559-8080-979756ee6350",
+      "id": "f2a354cc-217c-4df7-a244-ce54a5d1fb5c",
       "name": "Code in JavaScript"
     },
     {
@@ -21,10 +21,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        960,
-        0
+        944,
+        -80
       ],
-      "id": "7e57edaf-e150-4891-ac84-b82ed8a680ad",
+      "id": "f860ae16-5ae5-44db-8f2c-96c54ea67aec",
       "name": "Code in JavaScript1"
     },
     {
@@ -39,10 +39,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        0,
-        0
+        -16,
+        -80
       ],
-      "id": "2b24bdb1-9f76-46be-945d-e13f6767d2d5",
+      "id": "5171e931-0b3d-47d5-9807-c1d19a5f8a7b",
       "name": "Webhook (Web)",
       "webhookId": "a251f5ac-d582-4ab6-b9c7-a4a2db4bac6c"
     },
@@ -53,24 +53,23 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        220,
-        0
+        208,
+        -80
       ],
-      "id": "1ce8f1cb-41f1-4828-8395-a26fe663c554",
+      "id": "6f5005e2-b5c0-482b-a11e-1ef546e90053",
       "name": "Prep desde Excel"
     },
     {
       "parameters": {
-        "respondWith": "firstIncomingItem",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1580,
-        0
+        1568,
+        -80
       ],
-      "id": "1fc80ffc-0f80-46b2-bdc5-bd50a9ba76b6",
+      "id": "b75d27dc-6d5d-4575-9f38-cd64841908f3",
       "name": "Respond to Webhook"
     },
     {
@@ -95,30 +94,30 @@
       "type": "@n8n/n8n-nodes-langchain.googleGemini",
       "typeVersion": 1.1,
       "position": [
-        1180,
-        220
+        1120,
+        208
       ],
-      "id": "979edc0d-e3b2-41e5-8289-b63ec86265e3",
+      "id": "10ea985e-e336-4ae5-9880-77809ea271a2",
       "name": "Desempate LLM",
-      "onError": "continueRegularOutput",
       "credentials": {
         "googlePalmApi": {
-          "id": "rhvYGIztTMPYbAyB",
-          "name": "Google Gemini(PaLM) Api account"
+          "id": "GJkaPHsZxSq5PO4k",
+          "name": "Google Gemini(PaLM) Api account 4"
         }
-      }
+      },
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const heur = $('Code in JavaScript1').first().json;\nlet decisiones = [];\nconst cur = $json || {};\nif (Array.isArray(cur.decisiones)) decisiones = cur.decisiones;\nelse {\n  const raw = (cur.content && cur.content.parts && cur.content.parts[0]) ? cur.content.parts[0].text : null;\n  if (typeof raw === 'string') { try { const p = JSON.parse(raw); if (p && Array.isArray(p.decisiones)) decisiones = p.decisiones; } catch (e) {} }\n}\n\nconst asignaciones = (heur.asignaciones || []).map(a => ({ ...a }));\nconst equipo = (heur.input_original && heur.input_original.equipo) || [];\nconst empById = Object.fromEntries(equipo.map(e => [String(e.persona_id), e]));\nconst byTarea = Object.fromEntries(asignaciones.map(a => [String(a.tarea_id), a]));\nconst empatesById = Object.fromEntries((heur.empates || []).map(e => [String(e.tarea_id), e]));\n\nlet aplicados = 0;\nfor (const d of decisiones) {\n  const a = byTarea[String(d.tarea_id)];\n  const emp = empatesById[String(d.tarea_id)];\n  if (!a || !emp || a.estado_asignacion !== 'asignada') continue;\n  const cand = (emp.candidatos || []).find(c => String(c.persona_id) === String(d.persona_id));\n  if (!cand) continue;\n  const distinto = String(a.persona_id) !== String(d.persona_id);\n  if (distinto) {\n    const p = empById[String(d.persona_id)];\n    if (!p) continue;\n    a.persona_id = p.persona_id; a.persona = p.nombre; a.rol = p.rol; a.seniority = p.seniority;\n    a.skills_match = (cand.cubre || []).join(', ');\n  }\n  a.motivo = distinto\n    ? 'Desempate por LLM (cambió la elección del heurístico)'\n    : 'Desempate por LLM (confirmó la elección del heurístico)';\n  aplicados++;\n}\n\nconst horas = {}, tareasP = {};\nfor (const a of asignaciones) {\n  if (a.estado_asignacion !== 'asignada') continue;\n  const id = String(a.persona_id);\n  horas[id] = (horas[id] || 0) + Number(a.horas_estimadas || 0);\n  (tareasP[id] = tareasP[id] || []).push(a.tarea_id);\n}\nconst resumen_personas = (heur.resumen_personas || []).map(p => {\n  const id = String(p.persona_id);\n  const cap = Number(p.capacidad_horas_semana || 0);\n  const asign = horas[id] || 0;\n  return { ...p, horas_asignadas: asign, horas_libres: cap - asign, porcentaje_ocupacion: cap > 0 ? Math.round(asign / cap * 100) : 0, num_tareas: (tareasP[id] || []).length, tareas: (tareasP[id] || []).join(', ') };\n});\n\nreturn [{ json: { ...heur, asignaciones, resumen_personas, desempate_llm: aplicados } }];"
+        "jsCode": "const heur = $('Code in JavaScript1').first().json;\nlet decisiones = [];\nconst cur = $json || {};\nif (Array.isArray(cur.decisiones)) decisiones = cur.decisiones;\nelse {\n  const raw = (cur.content && cur.content.parts && cur.content.parts[0]) ? cur.content.parts[0].text : null;\n  if (typeof raw === 'string') { try { const p = JSON.parse(raw); if (p && Array.isArray(p.decisiones)) decisiones = p.decisiones; } catch (e) {} }\n}\n\nconst asignaciones = (heur.asignaciones || []).map(a => ({ ...a }));\nconst equipo = (heur.input_original && heur.input_original.equipo) || [];\nconst empById = Object.fromEntries(equipo.map(e => [String(e.persona_id), e]));\nconst byTarea = Object.fromEntries(asignaciones.map(a => [String(a.tarea_id), a]));\nconst empatesById = Object.fromEntries((heur.empates || []).map(e => [String(e.tarea_id), e]));\n\nlet aplicados = 0;\nfor (const d of decisiones) {\n  const a = byTarea[String(d.tarea_id)];\n  const emp = empatesById[String(d.tarea_id)];\n  if (!a || !emp || a.estado_asignacion !== 'asignada') continue;\n  const cand = (emp.candidatos || []).find(c => String(c.persona_id) === String(d.persona_id));\n  if (!cand) continue;\n  const distinto = String(a.persona_id) !== String(d.persona_id);\n  if (distinto) {\n    const p = empById[String(d.persona_id)];\n    if (!p) continue;\n    a.persona_id = p.persona_id; a.persona = p.nombre; a.rol = p.rol; a.seniority = p.seniority;\n    a.skills_match = (cand.cubre || []).join(', ');\n  }\n  a.motivo = distinto\n    ? 'Desempate por LLM (cambió la elección del heurístico)'\n    : 'Desempate por LLM (confirmó la elección del heurístico)';\n  aplicados++;\n}\n\nconst horas = {}, tareasP = {};\nfor (const a of asignaciones) {\n  if (a.estado_asignacion !== 'asignada') continue;\n  const id = String(a.persona_id);\n  horas[id] = (horas[id] || 0) + Number(a.horas_estimadas || 0);\n  (tareasP[id] = tareasP[id] || []).push(a.tarea_id);\n}\nconst resumen_personas = (heur.resumen_personas || []).map(p => {\n  const id = String(p.persona_id);\n  const cap = Number(p.capacidad_horas_semana || 0);\n  const asign = horas[id] || 0;\n  return { ...p, horas_asignadas: asign, horas_libres: cap - asign, porcentaje_ocupacion: cap > 0 ? Math.round(asign / cap * 100) : 0, num_tareas: (tareasP[id] || []).length, tareas: (tareasP[id] || []).join(', ') };\n});\n\nreturn [{ json: { ...heur, asignaciones, resumen_personas, desempate_llm: aplicados } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1380,
-        0
+        1376,
+        -80
       ],
-      "id": "94149154-efed-49e4-b4ff-a155c6f05406",
+      "id": "5d646245-fd26-46c4-8893-188fb700af56",
       "name": "Aplicar desempate"
     }
   ],
@@ -191,14 +190,16 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
+  "versionId": "f0edc156-3888-420d-9724-f248c8d46baf",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
   },
+  "id": "OeJfDXM9smu6M9lm",
   "tags": []
 }

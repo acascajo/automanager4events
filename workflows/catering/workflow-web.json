@@ -6,10 +6,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        0,
-        0
+        -848,
+        16
       ],
-      "id": "71a0a142-82f9-4a05-8bda-0ccccfdfd5d5",
+      "id": "8650d30c-7d15-4484-8c54-24f18d5e842f",
       "name": "When clicking ‘Execute workflow’"
     },
     {
@@ -20,10 +20,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        832,
-        -496
+        -16,
+        -480
       ],
-      "id": "2680e4a4-e457-46cc-926d-9449e93c102a",
+      "id": "05a7f52c-bf1c-4742-a9e8-211739fd7aae",
       "name": "Sticky Note"
     },
     {
@@ -33,10 +33,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        576,
-        560
+        -272,
+        576
       ],
-      "id": "be945bd3-9920-43fd-a0b1-05e2ee12b94c",
+      "id": "fce46614-de92-4b4e-ab24-ee578791b891",
       "name": "Sticky Note1"
     },
     {
@@ -48,10 +48,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1216,
-        -416
+        368,
+        -400
       ],
-      "id": "01916e06-877b-4a2d-ba4a-59aaec4f04b1",
+      "id": "2f6699d1-2722-4e20-883c-e8949ff31f47",
       "name": "Sticky Note4"
     },
     {
@@ -76,10 +76,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        288,
-        -256
+        -560,
+        -240
       ],
-      "id": "0f226679-68fa-45a3-81da-6b6c020b3d70",
+      "id": "aa3cf763-11d9-4e18-bdac-f68d78b74c10",
       "name": "Encuesta",
       "alwaysOutputData": true,
       "executeOnce": false,
@@ -112,10 +112,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        288,
-        0
+        -560,
+        16
       ],
-      "id": "af7f631f-6770-408f-9636-6d2a9f673fe5",
+      "id": "42d5b403-b4d9-48ea-b245-55d8c6d88ae0",
       "name": "BD_Camareros",
       "alwaysOutputData": true,
       "executeOnce": false,
@@ -147,10 +147,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        288,
-        352
+        -560,
+        368
       ],
-      "id": "9aa8e31a-3a98-41d2-824b-2c5e9d70a1ef",
+      "id": "5dc3e96a-35bf-46ef-88a3-dc78f6045038",
       "name": "Eventos",
       "alwaysOutputData": true,
       "executeOnce": false,
@@ -168,10 +168,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        800,
-        0
+        -48,
+        16
       ],
-      "id": "53f1e660-f30a-4b7e-bdb3-546bad57ce69",
+      "id": "ec53722e-f52b-43bd-a429-4aee9792962c",
       "name": "Code in JavaScript"
     },
     {
@@ -196,15 +196,15 @@
       "type": "@n8n/n8n-nodes-langchain.googleGemini",
       "typeVersion": 1.1,
       "position": [
-        960,
-        -144
+        112,
+        -128
       ],
-      "id": "a367ca3c-c5dc-4959-b800-4d089feeb4f0",
+      "id": "01e4d1d6-2593-4547-b6c8-95b66e6980cb",
       "name": "Message a model",
       "credentials": {
         "googlePalmApi": {
-          "id": "rhvYGIztTMPYbAyB",
-          "name": "Google Gemini(PaLM) Api account"
+          "id": "GJkaPHsZxSq5PO4k",
+          "name": "Google Gemini(PaLM) Api account 4"
         }
       },
       "onError": "continueRegularOutput"
@@ -219,23 +219,23 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        432,
-        -144
+        -416,
+        -128
       ],
-      "id": "db66d271-1154-4586-be4d-8cb603c0f41e",
+      "id": "1a3037c7-d2e1-4a84-bf2c-63531fd4605d",
       "name": "Merge"
     },
     {
       "parameters": {
-        "jsCode": "const raw = ($json && $json.content && $json.content.parts && $json.content.parts[0]) ? $json.content.parts[0].text : null;\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch (e) { parsed = { asignaciones: null }; }\nreturn [{ json: parsed }];"
+        "jsCode": "// Texto JSON devuelto por Gemini (si la IA falló, no habrá .content)\nconst raw = ($json && $json.content && $json.content.parts && $json.content.parts[0])\n  ? $json.content.parts[0].text\n  : null;\n\n// Por defecto: sin asignación de la IA -> esto activará el fallback en \"Aplanar\"\nlet parsed = { asignaciones: null };\nif (typeof raw === 'string') {\n  try {\n    const p = JSON.parse(raw);\n    if (p && typeof p === 'object') parsed = p;   // JSON válido de Gemini\n  } catch (e) { /* JSON inválido -> nos quedamos con asignaciones:null */ }\n}\n\nreturn [{ json: parsed }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1296,
-        -144
+        448,
+        -128
       ],
-      "id": "59b62f75-5397-489f-9922-185a5ce18536",
+      "id": "6619fcd5-1aa9-4df9-87c1-a95bd3002af6",
       "name": "Code in JavaScript1"
     },
     {
@@ -243,10 +243,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        608,
-        0
+        -240,
+        16
       ],
-      "id": "3d430381-a6fa-47b1-94cf-0ddca390a24b",
+      "id": "8d140b63-b598-4cda-b8d0-dfc852c315bc",
       "name": "Append"
     },
     {
@@ -254,10 +254,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        1520,
-        -16
+        672,
+        0
       ],
-      "id": "044bd425-cbe0-42e6-aa56-de6467dce343",
+      "id": "cba71dd7-50be-481b-b141-506d121acb09",
       "name": "Append2"
     },
     {
@@ -267,10 +267,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1744,
-        -16
+        896,
+        0
       ],
-      "id": "060560bb-bd4b-4808-9234-c43df6f04130",
+      "id": "3ecd4ecc-f8e1-4152-9997-2f9b3b256e55",
       "name": "Limpieza post append"
     },
     {
@@ -280,10 +280,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1936,
-        -16
+        1088,
+        0
       ],
-      "id": "4be7fbee-b143-466e-8d06-b1c5a37ff561",
+      "id": "4fea359c-1a10-441f-b51e-d9e07552ad5c",
       "name": "Validador"
     },
     {
@@ -314,10 +314,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2128,
-        -16
+        1280,
+        0
       ],
-      "id": "bc983907-10f1-4433-8203-a35bf1db5e07",
+      "id": "80a6057e-84b7-44eb-b679-3ca5f78889e5",
       "name": "If"
     },
     {
@@ -327,10 +327,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2336,
-        288
+        1488,
+        304
       ],
-      "id": "2808c0f8-cdf5-454e-8606-6c34d8b10643",
+      "id": "0f1ae29e-021a-446f-a4ed-96e6c50d4477",
       "name": "Fallback"
     },
     {
@@ -340,10 +340,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2576,
-        -160
+        1728,
+        -144
       ],
-      "id": "ff427d3c-1e49-4609-8c5f-fbbf1a695558",
+      "id": "7f9bc0dc-59ed-4861-a523-0ca8326ffd52",
       "name": "Unificar1"
     },
     {
@@ -353,10 +353,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2576,
-        288
+        1728,
+        304
       ],
-      "id": "f09a2947-8fd1-4d45-9de1-69acdb42048f",
+      "id": "d7f32f0b-60c6-4a6c-8c79-685924386b9e",
       "name": "Unificar2"
     },
     {
@@ -364,10 +364,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        2816,
-        80
+        1968,
+        96
       ],
-      "id": "6bd8eebc-aa6c-4395-ab85-3c876e16a1fd",
+      "id": "715328b2-e993-4bfa-9bc9-e2587c968d93",
       "name": "Merge1"
     },
     {
@@ -377,10 +377,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3008,
-        80
+        2160,
+        96
       ],
-      "id": "05bacff4-68a0-41e4-b133-e5ca981e99f7",
+      "id": "73903fdf-1f7d-42e0-8d23-0484a95f94ff",
       "name": "Aplanar"
     },
     {
@@ -392,10 +392,10 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2288,
-        448
+        1440,
+        464
       ],
-      "id": "996458e8-bd30-467b-96cf-aac9e48f82dd",
+      "id": "87b1fdfe-e582-4e83-a4ea-fde5260307b8",
       "name": "Sticky Note2"
     },
     {
@@ -410,24 +410,24 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -220,
-        240
+        -1008,
+        688
       ],
-      "id": "e0122c40-f2f4-4a1f-b75c-034f1479532e",
+      "id": "6ff9afa9-1fd6-40b2-95e4-5c370fbf453a",
       "name": "Webhook (Web)",
       "webhookId": "0d98ce46-59e0-4218-9786-a1fc18184a96"
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || {};\nconst disp = body.disponibilidad || [];\nconst cam  = body.camareros || [];\nconst eventos = body.eventos || [];\n\n// Merge disponibilidad + base de datos de camareros por telefono\nconst camByTel = {};\nfor (const c of cam) camByTel[String(c.telefono).trim()] = c;\n\nconst out = [];\nfor (const d of disp) {\n  const tel = String(d.telefono).trim();\n  out.push({ json: { ...(camByTel[tel] || {}), ...d } });\n}\nfor (const e of eventos) out.push({ json: e });\nreturn out;"
+        "jsCode": "const root = $input.first().json || {};\n// El body del webhook puede venir anidado en .body o (según versión) en la raíz\nconst body = (root.body && typeof root.body === 'object') ? root.body : root;\n\nconst disp    = body.disponibilidad || [];\nconst cam     = body.camareros || [];\nconst eventos = body.eventos || [];\n\n// Merge disponibilidad + base de datos de camareros por telefono\nconst camByTel = {};\nfor (const c of cam) camByTel[String(c.telefono).trim()] = c;\n\nconst out = [];\nfor (const d of disp) {\n  const tel = String(d.telefono).trim();\n  out.push({ json: { ...(camByTel[tel] || {}), ...d } });\n}\nfor (const e of eventos) out.push({ json: e });\nreturn out;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        200,
-        240
+        -480,
+        688
       ],
-      "id": "332fd1c4-2d30-4507-a1af-78d3db30898c",
+      "id": "8e751206-b65d-424f-b49a-19eca11e0e88",
       "name": "Prep desde Excel"
     },
     {
@@ -438,10 +438,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        3216,
-        80
+        2368,
+        96
       ],
-      "id": "f71530f9-b00d-4f19-9119-3eb39919a84e",
+      "id": "ad9e0ca8-fc63-4f9d-a0ff-fb79b182528c",
       "name": "Respond to Webhook"
     }
   ],
@@ -690,15 +690,16 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": false
+    "binaryMode": "separate"
   },
+  "versionId": "49978352-ae15-430d-9cbc-4f572c737836",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
   },
+  "id": "HPgo5r5mbtWsfe4b",
   "tags": []
 }

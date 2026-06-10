@@ -6,10 +6,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -304,
-        -48
+        640,
+        176
       ],
-      "id": "e9f1c01c-beaf-4618-b0c5-65be4eb466d8",
+      "id": "1c0e0ac5-fefc-411a-8591-4c05fa1bf33a",
       "name": "Merge"
     },
     {
@@ -19,10 +19,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -528,
-        -224
+        416,
+        0
       ],
-      "id": "a9ec9a76-b524-49f6-b264-e110c99aaab7",
+      "id": "956c0dfb-0b8a-42d4-abe1-670f0359dc5f",
       "name": "Code limpiar disponibilidades"
     },
     {
@@ -32,10 +32,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -528,
-        160
+        416,
+        384
       ],
-      "id": "2991b821-3a01-41b7-9cdb-5684dcd2167d",
+      "id": "3ad99ad6-74b1-4b25-a756-055025041673",
       "name": "Code limpiar guardias"
     },
     {
@@ -45,10 +45,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -96,
-        -48
+        848,
+        176
       ],
-      "id": "8d576628-66b2-4e18-b5ff-f8877e176694",
+      "id": "9cb6567c-a927-4b04-abfc-f492422e8e03",
       "name": "Preparar input asignacion"
     },
     {
@@ -58,10 +58,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        144,
-        -48
+        1088,
+        176
       ],
-      "id": "c5d2e5a6-d884-4866-bdab-385458c789a8",
+      "id": "f4ee943c-ba31-4ff8-ac25-533cd19146c2",
       "name": "Resolver CSP",
       "retryOnFail": true,
       "maxTries": 5
@@ -73,10 +73,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        384,
-        -48
+        1328,
+        176
       ],
-      "id": "4eec62d7-a37c-4d37-b183-811f483ba8b0",
+      "id": "4c5ea7b8-d119-4ba5-a240-994d523a50c2",
       "name": "Validador final"
     },
     {
@@ -86,10 +86,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        592,
-        -48
+        1536,
+        176
       ],
-      "id": "eeceba71-1805-4399-b6a0-9dfc64064309",
+      "id": "b4bb0698-d0d9-4386-adde-0b8ba418d567",
       "name": "Code in JavaScript"
     },
     {
@@ -104,10 +104,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -1160,
-        0
+        -224,
+        224
       ],
-      "id": "60f1601b-2552-4316-bfd6-631cde3fe4e8",
+      "id": "c7539f90-af41-4376-a9cc-4c8a94797187",
       "name": "Webhook (Web)",
       "webhookId": "eb0b3acd-5bdf-4cd4-829a-d0b3ffbdc7cf"
     },
@@ -118,10 +118,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -940,
-        -224
+        0,
+        0
       ],
-      "id": "282e9a36-2581-4220-b0ae-36f4938570fd",
+      "id": "0f017cb7-8b83-4903-a5dc-9264e3b1a261",
       "name": "Prep disp (Web)"
     },
     {
@@ -131,10 +131,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -940,
-        160
+        0,
+        384
       ],
-      "id": "9122451a-62ef-4624-9326-1a3dd6a1587f",
+      "id": "270cb5cc-b9fe-4e13-9ec1-a2c8fcba5df1",
       "name": "Prep guardias (Web)"
     },
     {
@@ -144,24 +144,23 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        800,
-        -48
+        1744,
+        176
       ],
-      "id": "d344df68-6b11-4b75-8c8b-6ed26d14bb16",
+      "id": "414c38fb-2776-4cc4-b451-9a216c7aff49",
       "name": "Respuesta web"
     },
     {
       "parameters": {
-        "respondWith": "firstIncomingItem",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1000,
-        -48
+        1952,
+        176
       ],
-      "id": "8ce37909-2d76-4848-b6fa-32960a15ff04",
+      "id": "6de509b2-2047-4023-8b62-9df13c0143c5",
       "name": "Respond to Webhook"
     }
   ],
@@ -294,15 +293,15 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": false
+    "binaryMode": "separate"
   },
+  "versionId": "1747c0b4-37f2-4206-b6a6-1f73e1093978",
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
   },
+  "id": "kYXqT48i624hUcUm",
   "tags": []
 }
