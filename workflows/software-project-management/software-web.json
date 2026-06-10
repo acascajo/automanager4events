@@ -1,0 +1,204 @@
+{
+  "name": "Gestor proyectos software (Web)",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\n\nfunction splitList(value) {\n  if (!value) return [];\n  return String(value)\n    .split(',')\n    .map(s => s.trim())\n    .filter(Boolean);\n}\n\nfunction norm(value) {\n  return String(value || '')\n    .trim()\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '');\n}\n\nconst equipo = [];\nconst proyectos = [];\nconst tareas = [];\n\nfor (const item of items) {\n  if (item.persona_id) {\n    equipo.push({\n      persona_id: String(item.persona_id).trim(),\n      nombre: String(item.nombre || '').trim(),\n      rol: String(item.rol || '').trim(),\n      seniority: String(item.seniority || '').trim(),\n      skills: splitList(item.skills),\n      skills_norm: splitList(item.skills).map(norm),\n      capacidad_horas_semana: Number(item.capacidad_horas_semana || 0),\n      disponibilidad: String(item.disponibilidad || '').trim(),\n      disponible: norm(item.disponibilidad) === 'disponible',\n      observaciones: item.observaciones || '',\n    });\n  }\n\n  if (item.proyecto_id && !item.tarea_id) {\n    proyectos.push({\n      proyecto_id: String(item.proyecto_id).trim(),\n      nombre: String(item.nombre || '').trim(),\n      cliente: String(item.cliente || '').trim(),\n      prioridad: Number(item.prioridad || 0),\n      fecha_inicio: item.fecha_inicio || '',\n      deadline: item.deadline || '',\n      estado: String(item.estado || '').trim(),\n      activo: norm(item.estado) === 'activo',\n      horas_estimadas: Number(item.horas_estimadas || 0),\n      observaciones: item.observaciones || '',\n    });\n  }\n\n  if (item.tarea_id) {\n    tareas.push({\n      tarea_id: String(item.tarea_id).trim(),\n      proyecto_id: String(item.proyecto_id || '').trim(),\n      nombre: String(item.nombre || '').trim(),\n      descripcion: item.descripcion || '',\n      skills_requeridas: splitList(item.skills_requeridas),\n      skills_requeridas_norm: splitList(item.skills_requeridas).map(norm),\n      horas_estimadas: Number(item.horas_estimadas || 0),\n      prioridad: Number(item.prioridad || 0),\n      deadline: item.deadline || '',\n      dependencias: splitList(item.dependencias),\n      bloqueada: norm(item.bloqueada) === 'si' || norm(item.bloqueada) === 'sí',\n      persona_preferida: String(item.persona_preferida || '').trim(),\n    });\n  }\n}\n\nconst proyectoById = Object.fromEntries(\n  proyectos.map(p => [p.proyecto_id, p])\n);\n\nconst equipoByNombre = Object.fromEntries(\n  equipo.map(p => [norm(p.nombre), p])\n);\n\nconst tareasPreparadas = tareas.map(t => {\n  const proyecto = proyectoById[t.proyecto_id] || {};\n  const preferida = equipoByNombre[norm(t.persona_preferida)];\n\n  return {\n    ...t,\n    proyecto_nombre: proyecto.nombre || '',\n    cliente: proyecto.cliente || '',\n    prioridad_proyecto: proyecto.prioridad || 0,\n    deadline_proyecto: proyecto.deadline || '',\n    persona_preferida_id: preferida?.persona_id || '',\n    persona_preferida_existe: Boolean(preferida),\n  };\n});\n\nconst resumen = {\n  total_personas: equipo.length,\n  total_proyectos: proyectos.length,\n  total_tareas: tareas.length,\n  horas_totales_tareas: tareas.reduce((sum, t) => sum + t.horas_estimadas, 0),\n  capacidad_total_semanal: equipo.reduce((sum, p) => sum + p.capacidad_horas_semana, 0),\n  tareas_bloqueadas: tareas.filter(t => t.bloqueada).length,\n};\n\nreturn [\n  {\n    json: {\n      equipo,\n      proyectos,\n      tareas: tareasPreparadas,\n      resumen_input: resumen,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        0
+      ],
+      "id": "16f0cb9a-39b7-4559-8080-979756ee6350",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst data = Array.isArray(input) ? input[0] : input;\n\nconst equipo = data.equipo || [];\nconst proyectos = data.proyectos || [];\nconst tareas = data.tareas || [];\n\nconst PERIODO = data.periodo || 'junio_2026';\n\nfunction norm(value) {\n  return String(value || '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim()\n    .toLowerCase();\n}\n\nfunction asArray(value) {\n  if (Array.isArray(value)) return value;\n  if (!value) return [];\n  return String(value)\n    .split(',')\n    .map(v => v.trim())\n    .filter(Boolean);\n}\n\nfunction dateValue(value) {\n  if (!value) return 9999999999999;\n  return new Date(value).getTime();\n}\n\nfunction seniorityBonus(seniority) {\n  const s = norm(seniority);\n  if (s === 'senior') return 20;\n  if (s === 'mid') return 10;\n  if (s === 'junior') return 0;\n  return 0;\n}\n\nconst personas = equipo\n  .filter(p => p.disponible !== false && norm(p.disponibilidad) !== 'no disponible')\n  .map(p => ({\n    ...p,\n    skills_norm: p.skills_norm || asArray(p.skills).map(norm),\n    horas_asignadas: 0,\n    tareas: [],\n  }));\n\nconst personaById = Object.fromEntries(personas.map(p => [p.persona_id, p]));\nconst personaByName = Object.fromEntries(personas.map(p => [norm(p.nombre), p]));\n\nconst proyectoById = Object.fromEntries(proyectos.map(p => [p.proyecto_id, p]));\n\nconst tareasOrdenadas = [...tareas]\n  .filter(t => !t.bloqueada)\n  .sort((a, b) => {\n    const prioridadA = Number(a.prioridad || 0) + Number(a.prioridad_proyecto || 0);\n    const prioridadB = Number(b.prioridad || 0) + Number(b.prioridad_proyecto || 0);\n\n    if (prioridadB !== prioridadA) return prioridadB - prioridadA;\n\n    return dateValue(a.deadline) - dateValue(b.deadline);\n  });\n\nconst asignaciones = [];\nconst empates = [];\nconst advertencias = [];\n\nfunction evaluarPersona(tarea, persona) {\n  const requeridas = tarea.skills_requeridas_norm || asArray(tarea.skills_requeridas).map(norm);\n  const personaSkills = persona.skills_norm || [];\n\n  const matched = requeridas.filter(s => personaSkills.includes(s));\n  const missing = requeridas.filter(s => !personaSkills.includes(s));\n\n  const horas = Number(tarea.horas_estimadas || 0);\n  const capacidadRestante = Number(persona.capacidad_horas_semana || 0) - Number(persona.horas_asignadas || 0);\n\n  const personaPreferidaId = tarea.persona_preferida_id;\n  const personaPreferidaNombre = norm(tarea.persona_preferida);\n\n  const esPreferida =\n    personaPreferidaId === persona.persona_id ||\n    personaPreferidaNombre === norm(persona.nombre);\n\n  let score = 0;\n\n  score += matched.length * 40;\n  score -= missing.length * 35;\n  score += seniorityBonus(persona.seniority);\n  score += esPreferida ? 35 : 0;\n\n  if (capacidadRestante >= horas) {\n    score += 50;\n  } else {\n    score -= Math.abs(capacidadRestante - horas) * 12;\n  }\n\n  score += Number(tarea.prioridad || 0) * 5;\n  score += Number(tarea.prioridad_proyecto || 0) * 5;\n\n  return {\n    persona,\n    score,\n    matched,\n    missing,\n    capacidadRestante,\n    cabe: capacidadRestante >= horas,\n    esPreferida,\n  };\n}\n\nfor (const tarea of tareasOrdenadas) {\n  const horas = Number(tarea.horas_estimadas || 0);\n\n  let candidatos = personas\n    .map(persona => evaluarPersona(tarea, persona))\n    .filter(c => c.cabe);\n\n  if (candidatos.length === 0) {\n    asignaciones.push({\n      tarea_id: tarea.tarea_id,\n      tarea: tarea.nombre,\n      proyecto_id: tarea.proyecto_id,\n      proyecto: tarea.proyecto_nombre || proyectoById[tarea.proyecto_id]?.nombre || '',\n      cliente: tarea.cliente || proyectoById[tarea.proyecto_id]?.cliente || '',\n      persona_id: '',\n      persona: '',\n      rol: '',\n      seniority: '',\n      estado_asignacion: 'sin_asignar',\n      horas_estimadas: horas,\n      deadline: tarea.deadline,\n      prioridad: tarea.prioridad,\n      skills_requeridas: asArray(tarea.skills_requeridas).join(', '),\n      skills_match: '',\n      score_asignacion: '',\n      motivo: 'Sin persona con capacidad suficiente',\n    });\n\n    advertencias.push({\n      tipo: 'TAREA_SIN_ASIGNAR',\n      tarea_id: tarea.tarea_id,\n      tarea: tarea.nombre,\n      detalle: `No hay capacidad suficiente para ${horas}h`,\n    });\n\n    continue;\n  }\n\n  candidatos.sort((a, b) => b.score - a.score);\n\n  // Empate/cercanía: si el 2º candidato está a <=35 pts, se marca para desempate por LLM\n  if (candidatos.length >= 2 && (candidatos[0].score - candidatos[1].score) <= 35) {\n    empates.push({\n      tarea_id: tarea.tarea_id,\n      tarea: tarea.nombre,\n      descripcion: tarea.descripcion || '',\n      skills_requeridas: asArray(tarea.skills_requeridas).join(', '),\n      candidatos: candidatos.slice(0, 3).map(c => ({ persona_id: c.persona.persona_id, nombre: c.persona.nombre, seniority: c.persona.seniority, score: c.score, cubre: c.matched, falta: c.missing })),\n    });\n  }\n  const elegido = candidatos[0];\n  const persona = elegido.persona;\n\n  persona.horas_asignadas += horas;\n  persona.tareas.push(tarea.tarea_id);\n\n  const proyecto = proyectoById[tarea.proyecto_id] || {};\n\n  asignaciones.push({\n    tarea_id: tarea.tarea_id,\n    tarea: tarea.nombre,\n    proyecto_id: tarea.proyecto_id,\n    proyecto: tarea.proyecto_nombre || proyecto.nombre || '',\n    cliente: tarea.cliente || proyecto.cliente || '',\n    persona_id: persona.persona_id,\n    persona: persona.nombre,\n    rol: persona.rol,\n    seniority: persona.seniority,\n    estado_asignacion: 'asignada',\n    horas_estimadas: horas,\n    deadline: tarea.deadline,\n    prioridad: tarea.prioridad,\n    skills_requeridas: asArray(tarea.skills_requeridas).join(', '),\n    skills_match: elegido.matched.join(', '),\n    score_asignacion: elegido.score,\n    motivo: elegido.esPreferida\n      ? 'Asignada a persona preferida viable'\n      : 'Asignada por mejor encaje skills/capacidad',\n  });\n\n  if (elegido.missing.length > 0) {\n    advertencias.push({\n      tipo: 'SKILLS_INCOMPLETAS',\n      tarea_id: tarea.tarea_id,\n      tarea: tarea.nombre,\n      persona: persona.nombre,\n      detalle: `Faltan skills: ${elegido.missing.join(', ')}`,\n    });\n  }\n}\n\nconst resumenPersonas = personas.map(p => {\n  const capacidad = Number(p.capacidad_horas_semana || 0);\n  const asignado = Number(p.horas_asignadas || 0);\n\n  if (asignado > capacidad) {\n    advertencias.push({\n      tipo: 'SOBRECARGA_PERSONA',\n      persona_id: p.persona_id,\n      persona: p.nombre,\n      capacidad,\n      asignado,\n      exceso: asignado - capacidad,\n    });\n  }\n\n  return {\n    persona_id: p.persona_id,\n    nombre: p.nombre,\n    rol: p.rol,\n    capacidad_horas_semana: capacidad,\n    horas_asignadas: asignado,\n    horas_libres: capacidad - asignado,\n    porcentaje_ocupacion: capacidad > 0 ? Math.round((asignado / capacidad) * 100) : 0,\n    num_tareas: p.tareas.length,\n    tareas: p.tareas.join(', '),\n  };\n});\n\nconst resumenProyectos = proyectos.map(proyecto => {\n  const tareasProyecto = tareas.filter(t => t.proyecto_id === proyecto.proyecto_id);\n  const asignadasProyecto = asignaciones.filter(\n    a => a.proyecto_id === proyecto.proyecto_id && a.estado_asignacion === 'asignada'\n  );\n\n  return {\n    proyecto_id: proyecto.proyecto_id,\n    nombre: proyecto.nombre,\n    cliente: proyecto.cliente,\n    prioridad: proyecto.prioridad,\n    deadline: proyecto.deadline,\n    total_tareas: tareasProyecto.length,\n    tareas_asignadas: asignadasProyecto.length,\n    tareas_sin_asignar: tareasProyecto.length - asignadasProyecto.length,\n    horas_asignadas: asignadasProyecto.reduce((sum, a) => sum + Number(a.horas_estimadas || 0), 0),\n  };\n});\n\nconst resumen = {\n  total_tareas: tareas.length,\n  tareas_asignadas: asignaciones.filter(a => a.estado_asignacion === 'asignada').length,\n  tareas_sin_asignar: asignaciones.filter(a => a.estado_asignacion === 'sin_asignar').length,\n  total_advertencias: advertencias.length,\n  horas_totales_asignadas: asignaciones.reduce((sum, a) => {\n    if (a.estado_asignacion !== 'asignada') return sum;\n    return sum + Number(a.horas_estimadas || 0);\n  }, 0),\n  capacidad_total: personas.reduce((sum, p) => sum + Number(p.capacidad_horas_semana || 0), 0),\n};\n\nreturn [\n  {\n    json: {\n      periodo: PERIODO,\n      asignaciones,\n      resumen_personas: resumenPersonas,\n      resumen_proyectos: resumenProyectos,\n      advertencias,\n      resumen,\n      input_original: data,\n      empates,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "7e57edaf-e150-4891-ac84-b82ed8a680ad",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "software-assign",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2b24bdb1-9f76-46be-945d-e13f6767d2d5",
+      "name": "Webhook (Web)",
+      "webhookId": "a251f5ac-d582-4ab6-b9c7-a4a2db4bac6c"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json || {};\nconst body = (root.body && typeof root.body === \"object\") ? root.body : root;\nconst out = [];\nfor (const e of (body.equipo || []))    out.push({ json: e });\nfor (const p of (body.proyectos || [])) out.push({ json: p });\nfor (const t of (body.tareas || []))    out.push({ json: t });\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "1ce8f1cb-41f1-4828-8395-a26fe663c554",
+      "name": "Prep desde Excel"
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1580,
+        0
+      ],
+      "id": "1fc80ffc-0f80-46b2-bdc5-bd50a9ba76b6",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres un sistema de desempate para asignación de tareas de software. Para CADA tarea de la lista \"empates\", elige el persona_id del candidato que mejor encaja CUALITATIVAMENTE con la descripción de la tarea, teniendo en cuenta las skills que cubre y las que faltan, la seniority y la naturaleza de la tarea. Solo puedes elegir un persona_id presente en los candidatos de esa tarea. Si la lista está vacía, devuelve decisiones vacías.\n\nDevuelve SOLO JSON, sin explicaciones ni markdown, con este formato exacto:\n{\"decisiones\":[{\"tarea_id\":\"...\",\"persona_id\":\"...\"}]}\n\nEmpates:\n{{ JSON.stringify($json.empates || []) }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1180,
+        220
+      ],
+      "id": "979edc0d-e3b2-41e5-8289-b63ec86265e3",
+      "name": "Desempate LLM",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "rhvYGIztTMPYbAyB",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const heur = $('Code in JavaScript1').first().json;\nlet decisiones = [];\nconst cur = $json || {};\nif (Array.isArray(cur.decisiones)) decisiones = cur.decisiones;\nelse {\n  const raw = (cur.content && cur.content.parts && cur.content.parts[0]) ? cur.content.parts[0].text : null;\n  if (typeof raw === 'string') { try { const p = JSON.parse(raw); if (p && Array.isArray(p.decisiones)) decisiones = p.decisiones; } catch (e) {} }\n}\n\nconst asignaciones = (heur.asignaciones || []).map(a => ({ ...a }));\nconst equipo = (heur.input_original && heur.input_original.equipo) || [];\nconst empById = Object.fromEntries(equipo.map(e => [String(e.persona_id), e]));\nconst byTarea = Object.fromEntries(asignaciones.map(a => [String(a.tarea_id), a]));\nconst empatesById = Object.fromEntries((heur.empates || []).map(e => [String(e.tarea_id), e]));\n\nlet aplicados = 0;\nfor (const d of decisiones) {\n  const a = byTarea[String(d.tarea_id)];\n  const emp = empatesById[String(d.tarea_id)];\n  if (!a || !emp || a.estado_asignacion !== 'asignada') continue;\n  const cand = (emp.candidatos || []).find(c => String(c.persona_id) === String(d.persona_id));\n  if (!cand) continue;\n  const distinto = String(a.persona_id) !== String(d.persona_id);\n  if (distinto) {\n    const p = empById[String(d.persona_id)];\n    if (!p) continue;\n    a.persona_id = p.persona_id; a.persona = p.nombre; a.rol = p.rol; a.seniority = p.seniority;\n    a.skills_match = (cand.cubre || []).join(', ');\n  }\n  a.motivo = distinto\n    ? 'Desempate por LLM (cambió la elección del heurístico)'\n    : 'Desempate por LLM (confirmó la elección del heurístico)';\n  aplicados++;\n}\n\nconst horas = {}, tareasP = {};\nfor (const a of asignaciones) {\n  if (a.estado_asignacion !== 'asignada') continue;\n  const id = String(a.persona_id);\n  horas[id] = (horas[id] || 0) + Number(a.horas_estimadas || 0);\n  (tareasP[id] = tareasP[id] || []).push(a.tarea_id);\n}\nconst resumen_personas = (heur.resumen_personas || []).map(p => {\n  const id = String(p.persona_id);\n  const cap = Number(p.capacidad_horas_semana || 0);\n  const asign = horas[id] || 0;\n  return { ...p, horas_asignadas: asign, horas_libres: cap - asign, porcentaje_ocupacion: cap > 0 ? Math.round(asign / cap * 100) : 0, num_tareas: (tareasP[id] || []).length, tareas: (tareasP[id] || []).join(', ') };\n});\n\nreturn [{ json: { ...heur, asignaciones, resumen_personas, desempate_llm: aplicados } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1380,
+        0
+      ],
+      "id": "94149154-efed-49e4-b4ff-a155c6f05406",
+      "name": "Aplicar desempate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook (Web)": {
+      "main": [
+        [
+          {
+            "node": "Prep desde Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep desde Excel": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Desempate LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desempate LLM": {
+      "main": [
+        [
+          {
+            "node": "Aplicar desempate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aplicar desempate": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26c38233468d8e9930ab5c413502b4f174f1979bf2277e5f5d0698d361bd737f"
+  },
+  "tags": []
+}

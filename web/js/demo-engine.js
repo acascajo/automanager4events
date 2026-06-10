@@ -132,6 +132,43 @@ const DEMO = (() => {
     setHTML('catering-results-alerts', validBadge + res.warnings.map(alertHTML).join(''));
   }
 
+  // Adapta la respuesta REAL del webhook de n8n (el array que produce el nodo
+  // "Aplanar": una fila por camarero asignado) al formato que espera
+  // renderCatering, y la pinta en la pestaña de resultados.
+  function renderCateringFromN8n(payload) {
+    const list = Array.isArray(payload) ? payload
+               : Array.isArray(payload && payload.data) ? payload.data
+               : [];
+    // n8n devuelve la fecha como DD/MM/YYYY; fmtFecha espera ISO YYYY-MM-DD
+    const toISO = f => {
+      const m = String(f == null ? '' : f).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      return m ? `${m[3]}-${m[2]}-${m[1]}` : String(f == null ? '' : f);
+    };
+    const truthy = v => v === true || ['si', 'sí', 'true', '1'].includes(String(v).toLowerCase());
+
+    const asignaciones = list.map(r => ({
+      camarero: { nombre: r.nombre || r.telefono || '—' },
+      evento:   { nombre: r.event_id || '—' },
+      fecha:    toISO(r.fecha),
+      coche:    truthy(r.tiene_coche),
+      score:    Number(r.score_general) || 0,
+    }));
+    const eventos = [...new Set(list.map(r => r.event_id).filter(Boolean))];
+    const conVehiculo = asignaciones.filter(a => a.coche).length;
+    const origen = list.length ? list[0].origen_asignacion : null;
+
+    const warnings = [];
+    if (origen) warnings.push({ tipo: 'info', msg: `Motor de asignación usado: ${origen === 'ia' ? 'LLM (Gemini)' : 'fallback heurístico'}.` });
+    warnings.push({ tipo: 'info', msg: `Resultado real recibido de n8n: ${asignaciones.length} asignación(es) en ${eventos.length} evento(s).` });
+
+    renderCatering({
+      asignaciones,
+      warnings,
+      validacion: { ok: true, violaciones: [] },
+      stats: { asignados: asignaciones.length, eventosCubiertos: eventos.length, totalEventos: eventos.length, conVehiculo, avisos: warnings.length },
+    });
+  }
+
   // ════════════════════════════════════════════════════════════════
   // SOFTWARE — scoring heurístico multivariable
   // ════════════════════════════════════════════════════════════════
@@ -261,6 +298,50 @@ const DEMO = (() => {
       '<div class="alert alert-info"><i class="ti ti-check"></i><span>Sin advertencias.</span></div>');
   }
 
+  // Adapta la respuesta REAL del webhook de software (asignación heurística de n8n)
+  // al formato de renderSoftware y la pinta en la pestaña de resultados.
+  function renderSoftwareFromN8n(data) {
+    const asig = (data && data.asignaciones) || [];
+    const splitSkills = s => String(s || '').split(',').map(x => x.trim()).filter(Boolean);
+    const asignadasRaw = asig.filter(a => a.estado_asignacion === 'asignada');
+    const sinAsignar = asig.filter(a => a.estado_asignacion === 'sin_asignar');
+
+    const asignadas = asignadasRaw.map(a => {
+      const matched = splitSkills(a.skills_match);
+      const matchedN = matched.map(norm);
+      const missing = splitSkills(a.skills_requeridas).filter(s => !matchedN.includes(norm(s)));
+      return { tarea: { nombre: a.tarea, horas: a.horas_estimadas }, persona: { nombre: a.persona }, score: a.score_asignacion, matched, missing };
+    });
+    const noAsignadas = sinAsignar.map(a => ({ tarea: { nombre: a.tarea }, motivo: a.motivo || 'Sin capacidad suficiente' }));
+    const carga = (data.resumen_personas || []).map(p => ({
+      persona: { nombre: p.nombre, disponible: true },
+      usadas: p.horas_asignadas, capacidad: p.capacidad_horas_semana, pct: p.porcentaje_ocupacion,
+    }));
+    const warnings = (data.advertencias || []).map(w => ({
+      tipo: 'warn',
+      msg: `${w.tarea || w.persona || ''}${(w.tarea || w.persona) ? ': ' : ''}${w.detalle || w.tipo}`,
+    }));
+    if (data.desempate_llm > 0) {
+      warnings.unshift({ tipo: 'info', msg: `${data.desempate_llm} desempate(s) resueltos cualitativamente por el LLM (Gemini).` });
+    }
+    const recomendaciones = noAsignadas.length
+      ? ['Dividir las tareas grandes en subtareas para aprovechar la capacidad libre del equipo.']
+      : [];
+    const r = data.resumen || {};
+    const scoreMedio = asignadas.length ? asignadas.reduce((s, a) => s + Number(a.score || 0), 0) / asignadas.length : 0;
+
+    renderSoftware({
+      asignadas, noAsignadas, warnings, recomendaciones, carga,
+      stats: {
+        asignadas: asignadas.length,
+        totalTareas: r.total_tareas ?? asig.length,
+        devs: new Set(asignadasRaw.map(a => a.persona_id || a.persona)).size,
+        totalHoras: r.horas_totales_asignadas ?? asignadas.reduce((s, a) => s + Number(a.tarea.horas || 0), 0),
+        scoreMedio,
+      },
+    });
+  }
+
   // ════════════════════════════════════════════════════════════════
   // GUARDIAS — resumen por médico + advertencias blandas
   // ════════════════════════════════════════════════════════════════
@@ -348,6 +429,16 @@ const DEMO = (() => {
     // Pre-rellena las tres pestañas de resultados al cargar
     init() {
       ['catering', 'software', 'guardias'].forEach(b => this.run(b));
+    },
+    // Pinta en la tabla de catering la respuesta REAL devuelta por n8n
+    renderCateringFromN8n(payload) {
+      try { renderCateringFromN8n(payload); }
+      catch (e) { console.warn('[DEMO] Error al renderizar resultado real de catering', e); }
+    },
+    // Pinta en la tabla de software la respuesta REAL devuelta por n8n
+    renderSoftwareFromN8n(data) {
+      try { renderSoftwareFromN8n(data); }
+      catch (e) { console.warn('[DEMO] Error al renderizar resultado real de software', e); }
     },
   };
 })();

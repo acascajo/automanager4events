@@ -26,23 +26,54 @@ function gotoPage(page) {
   document.getElementById('topbar-bc').textContent = PAGE_LABELS[page] || page;
 }
 
-// ── Login / Logout ───────────────────────────────────────────────
-function doLogin() {
-  const user = document.getElementById('login-user').value.trim() || 'prueba';
+// ── Login / Logout (autenticación real: credencial con hash en localStorage) ──
+const AUTH_KEY = 'smartassign-auth';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Siembra una credencial por defecto (admin / admin) la primera vez
+async function ensureDefaultUser() {
+  if (!localStorage.getItem(AUTH_KEY)) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify({ user: 'admin', hash: await sha256('admin') }));
+  }
+  const err = document.getElementById('login-error');
+  if (err && !err.textContent) { err.style.color = 'var(--muted-text, #889)'; err.textContent = 'Credenciales por defecto: admin / admin'; }
+}
+
+function enterApp(user) {
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('hidden');
-
-  // Mostrar nombre de usuario
-  const initials = user.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const initials = user.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'U';
   document.getElementById('user-avatar').textContent = initials;
-  document.getElementById('user-name').textContent   = user;
+  document.getElementById('user-name').textContent = user;
   const sessUser = document.getElementById('session-user');
   if (sessUser) sessUser.textContent = user;
-
   N8N.init();
 }
 
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const setErr = m => { if (errEl) { errEl.style.color = 'var(--danger-text)'; errEl.textContent = m; } };
+
+  let cred = {};
+  try { cred = JSON.parse(localStorage.getItem(AUTH_KEY) || '{}'); } catch (e) {}
+  if (!user || !pass) { setErr('Introduce usuario y contraseña.'); return; }
+  const hash = await sha256(pass);
+  if (user !== cred.user || hash !== cred.hash) { setErr('Usuario o contraseña incorrectos.'); return; }
+
+  if (errEl) errEl.textContent = '';
+  sessionStorage.setItem('smartassign-session', user);
+  enterApp(user);
+}
+
 function doLogout() {
+  sessionStorage.removeItem('smartassign-session');
+  document.getElementById('login-pass').value = '';
   document.getElementById('screen-app').classList.add('hidden');
   document.getElementById('screen-login').classList.remove('hidden');
 }
@@ -89,6 +120,45 @@ function triggerUpload(module) {
   if (input) input.click();
 }
 
+// Datos parseados del último Excel subido, por módulo (se envían a n8n al lanzar)
+const UPLOADED = {};
+
+// Lee el .xlsx subido con SheetJS y guarda sus hojas como JSON para enviarlas a n8n.
+// Cada hoja se localiza por nombre (el de la plantilla) y, si no, por posición.
+function parseUploadedExcel(file, module) {
+  if (typeof XLSX === 'undefined') { console.warn('[upload] SheetJS no disponible'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const sheet = (name, idx) => {
+        const sn = wb.SheetNames.find(s => s.toLowerCase() === name.toLowerCase()) || wb.SheetNames[idx];
+        return sn ? XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '' }) : [];
+      };
+      if (module === 'catering') {
+        UPLOADED.catering = {
+          disponibilidad: sheet('Disponibilidad', 0),
+          camareros:      sheet('Camareros', 1),
+          eventos:        sheet('Eventos', 2),
+        };
+        const c = UPLOADED.catering;
+        console.log(`[upload] catering: ${c.disponibilidad.length} disponibilidad · ${c.camareros.length} camareros · ${c.eventos.length} eventos`);
+      } else if (module === 'software') {
+        UPLOADED.software = {
+          equipo:    sheet('Equipo', 0),
+          proyectos: sheet('Proyectos', 1),
+          tareas:    sheet('Tareas', 2),
+        };
+        const s = UPLOADED.software;
+        console.log(`[upload] software: ${s.equipo.length} equipo · ${s.proyectos.length} proyectos · ${s.tareas.length} tareas`);
+      }
+    } catch (err) {
+      console.warn('[upload] No se pudo parsear el Excel:', err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function handleFileUpload(event, module) {
   const file = event.target.files[0];
   if (!file) return;
@@ -110,6 +180,9 @@ function handleFileUpload(event, module) {
   const status = document.getElementById(module + '-run-status');
   if (status) status.textContent = 'Archivo cargado. Configura los parámetros y lanza.';
 
+  // Parsear el Excel y guardar sus datos para enviarlos a n8n al lanzar
+  parseUploadedExcel(file, module);
+
   // Avanzar paso 1 → 2 en el indicador de progreso
   advanceStep(module, 1);
 }
@@ -127,7 +200,150 @@ function removeFile(module) {
   if (runBtn) runBtn.disabled = true;
   if (status) status.textContent = 'Sube el archivo para continuar';
 
+  delete UPLOADED[module];   // descartar los datos parseados del archivo anterior
+
   resetSteps(module);
+}
+
+// ── Catering: dos archivos (BD de camareros PERSISTENTE + respuestas/eventos) ──
+// La BD de camareros se guarda en localStorage: se sube una vez y se conserva
+// entre sesiones; solo hay que subir las respuestas/eventos en cada ejecución.
+const CATERING_BD_KEY = 'smartassign-catering-camareros';
+
+function handleCateringUpload(event, kind) {       // kind = 'bd' | 'resp'
+  const file = event.target.files[0];
+  if (!file) return;
+  const slot = 'catering-' + kind;
+  const zone = document.getElementById(slot + '-upload-zone');
+  const info = document.getElementById(slot + '-file-info');
+  const name = document.getElementById(slot + '-file-name');
+  const meta = document.getElementById(slot + '-file-meta');
+  if (zone) zone.classList.add('hidden');
+  if (info) info.classList.remove('hidden');
+  if (name) name.textContent = file.name;
+  if (meta) meta.textContent = 'leyendo…';
+  parseCateringFile(file, kind, meta);
+}
+
+function parseCateringFile(file, kind, metaEl) {
+  if (typeof XLSX === 'undefined') { console.warn('[upload] SheetJS no disponible'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const sheet = (name, idx) => {
+        const sn = wb.SheetNames.find(s => s.toLowerCase() === name.toLowerCase()) || wb.SheetNames[idx];
+        return sn ? XLSX.utils.sheet_to_json(wb.Sheets[sn], { defval: '' }) : [];
+      };
+      UPLOADED.catering = UPLOADED.catering || {};
+      if (kind === 'bd') {
+        const cam = sheet('Camareros', 0);
+        UPLOADED.catering.camareros = cam;
+        try { localStorage.setItem(CATERING_BD_KEY, JSON.stringify(cam)); }
+        catch (e2) { console.warn('[catering] no se pudo guardar la BD (¿demasiado grande?)', e2); }
+        if (metaEl) metaEl.textContent = `${cam.length} camareros · guardada en el navegador`;
+      } else {
+        UPLOADED.catering.disponibilidad = sheet('Disponibilidad', 0);
+        UPLOADED.catering.eventos = sheet('Eventos', 1);
+        if (metaEl) metaEl.textContent = `${UPLOADED.catering.disponibilidad.length} disponibilidades · ${UPLOADED.catering.eventos.length} eventos`;
+      }
+      updateCateringReady();
+    } catch (err) {
+      console.warn('[upload] No se pudo parsear el Excel:', err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function removeCateringFile(kind) {
+  const slot = 'catering-' + kind;
+  const zone = document.getElementById(slot + '-upload-zone');
+  const info = document.getElementById(slot + '-file-info');
+  const input = document.getElementById(slot + '-file-input');
+  if (zone) zone.classList.remove('hidden');
+  if (info) info.classList.add('hidden');
+  if (input) input.value = '';
+  UPLOADED.catering = UPLOADED.catering || {};
+  if (kind === 'bd') {
+    delete UPLOADED.catering.camareros;
+    try { localStorage.removeItem(CATERING_BD_KEY); } catch (e) {}
+  } else {
+    delete UPLOADED.catering.disponibilidad;
+    delete UPLOADED.catering.eventos;
+  }
+  updateCateringReady();
+}
+
+// Habilita "Lanzar" cuando hay BD de camareros + (disponibilidad y eventos)
+function updateCateringReady() {
+  const d = UPLOADED.catering || {};
+  const hasBD   = Array.isArray(d.camareros) && d.camareros.length > 0;
+  const hasResp = Array.isArray(d.disponibilidad) && Array.isArray(d.eventos) && d.eventos.length > 0;
+  const btn = document.getElementById('catering-run-btn');
+  if (btn) btn.disabled = !(hasBD && hasResp);
+  const status = document.getElementById('catering-run-status');
+  if (status) {
+    if (hasBD && hasResp)  status.textContent = 'Archivos listos. Pulsa para lanzar.';
+    else if (hasBD)        status.textContent = 'BD de camareros lista. Sube las respuestas y eventos.';
+    else if (hasResp)      status.textContent = 'Respuestas listas. Sube la base de datos de camareros.';
+    else                   status.textContent = 'Sube los dos archivos para continuar';
+  }
+  if (hasBD && hasResp) advanceStep('catering', 1);
+}
+
+// Restaura la BD de camareros guardada (no hay que volver a subirla)
+function initCatering() {
+  try {
+    const saved = localStorage.getItem(CATERING_BD_KEY);
+    if (saved) {
+      const cam = JSON.parse(saved);
+      if (Array.isArray(cam) && cam.length) {
+        UPLOADED.catering = UPLOADED.catering || {};
+        UPLOADED.catering.camareros = cam;
+        const zone = document.getElementById('catering-bd-upload-zone');
+        const info = document.getElementById('catering-bd-file-info');
+        const name = document.getElementById('catering-bd-file-name');
+        const meta = document.getElementById('catering-bd-file-meta');
+        if (zone) zone.classList.add('hidden');
+        if (info) info.classList.remove('hidden');
+        if (name) name.textContent = 'Base de datos guardada';
+        if (meta) meta.textContent = `${cam.length} camareros · guardada en el navegador`;
+      }
+    }
+  } catch (e) { console.warn('[catering] no se pudo restaurar la BD', e); }
+  updateCateringReady();
+}
+
+// ── Notificación por correo a los camareros asignados (SIMULADA) ──────────
+// Resuelve el email de cada asignado desde la BD de camareros.
+let lastCateringAssignments = [];
+function buildCateringRecipients(data) {
+  const list = Array.isArray(data) ? data : [];
+  const cam = (UPLOADED.catering && UPLOADED.catering.camareros) || [];
+  const emailByTel = {};
+  for (const c of cam) emailByTel[String(c.telefono).trim()] = c.email || '';
+  lastCateringAssignments = list.map(r => ({
+    nombre: r.nombre, telefono: r.telefono, event_id: r.event_id,
+    email: emailByTel[String(r.telefono).trim()] || '',
+  }));
+}
+
+// Opción de envío: SIMULADA (no hay workflow de n8n de envío asignado)
+function sendCateringEmails() {
+  const cont = document.getElementById('catering-email-result');
+  if (!lastCateringAssignments.length) {
+    if (cont) cont.innerHTML = '<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>Lanza primero una asignación con n8n para tener a quién notificar.</span></div>';
+    return;
+  }
+  const conEmail = lastCateringAssignments.filter(a => a.email);
+  const sinEmail = lastCateringAssignments.length - conEmail.length;
+  const lista = conEmail.map(a => `${a.nombre} (${a.email})`).join(', ');
+  const aviso = sinEmail ? ` · ${sinEmail} sin email en la BD` : '';
+  if (cont) cont.innerHTML =
+    '<div class="alert alert-info"><i class="ti ti-mail-check"></i><span>' +
+    `<strong>Asignaciones aceptadas.</strong> Se enviarían ${conEmail.length} correos${aviso} a: ${lista}.` +
+    '<br><em>Simulado: no hay un workflow de n8n de envío configurado, así que no se envía nada realmente.</em>' +
+    '</span></div>';
 }
 
 // ── Indicador de pasos ───────────────────────────────────────────
@@ -242,27 +458,25 @@ function buildGuardiasWeeks() {
 // Recoge los parámetros del formulario según el módulo
 function buildPayload(module) {
   if (module === 'catering') {
+    const data = UPLOADED.catering || {};
     return {
-      // Los eventos, camareros y requisitos llegan en la plantilla; el motor es automático
-      email: document.getElementById('catering-email')?.checked || false,
+      // Datos de los Excel subidos (BD camareros + respuestas/eventos):
+      // el workflow los usa en lugar de Google Sheets
+      disponibilidad: data.disponibilidad || [],
+      camareros:      data.camareros || [],
+      eventos:        data.eventos || [],
     };
   }
   if (module === 'guardias-send') {
-    // Un solo clic establece el periodo completo: el mes, la fecha límite y la
-    // distribución de residentes por semana. n8n envía los correos al instante y,
-    // con un trigger nocturno, recoge/procesa las respuestas y genera el calendario
-    // automáticamente tras la fecha límite.
-    const semanas = [...document.querySelectorAll('#guardias-weeks [data-week]')]
-      .map(s => ({ semana: Number(s.dataset.week), residentes: Number(s.value) }));
-    return {
-      mes:      document.getElementById('guardias-mes')?.value      || '',
-      deadline: document.getElementById('guardias-deadline')?.value || '',
-      semanas,
-    };
+    // Simulación: la web genera internamente las disponibilidades de los médicos
+    // (como si hubieran respondido por correo) + las guardias necesarias del periodo,
+    // y se las manda al webhook guardias-run, que ejecuta el solver CSP sin enviar
+    // correos ni escribir en Google Sheets.
+    return buildGuardiasSimData();
   }
   if (module === 'software') {
-    // Equipo, proyectos y tareas (con todos sus parámetros) vienen en la plantilla
-    return {};
+    const d = UPLOADED.software || {};
+    return { equipo: d.equipo || [], proyectos: d.proyectos || [], tareas: d.tareas || [] };
   }
   return {};
 }
@@ -329,11 +543,24 @@ async function runWorkflow(module) {
     if (runBtn) runBtn.disabled = false;
     if (result.ok) {
       if (module === 'guardias-send') {
-        // Los correos se envían al instante; n8n procesa de madrugada y genera tras la fecha límite
-        setStatus(mensajeSolicitudesEnviadas(false));
+        // Simulación: el webhook devuelve destinatarios (envío simulado) + calendario CSP
+        renderGuardiasFromN8n(result.data);
+        setStatus(mensajeEnvioSimulado(result.data));
+        showResults('guardias');   // ir a la pestaña Calendario
         return;
       }
-      setStatus('✓ Workflow ejecutado correctamente. Revisa la pestaña Resultados.');
+      setStatus('✓ Workflow ejecutado en n8n. Mostrando resultados reales.');
+      // Pintar la respuesta REAL de n8n en la tabla del módulo + registrar en historial
+      if (base === 'catering') {
+        buildCateringRecipients(result.data);   // resuelve emails para la opción de envío
+        const er = document.getElementById('catering-email-result');
+        if (er) er.innerHTML = '';               // limpiar notificación anterior
+        if (window.DEMO && DEMO.renderCateringFromN8n) DEMO.renderCateringFromN8n(result.data);
+        registrarHistorialCatering(result.data);
+      } else if (base === 'software') {
+        if (window.DEMO && DEMO.renderSoftwareFromN8n) DEMO.renderSoftwareFromN8n(result.data);
+        registrarHistorialSoftware(result.data);
+      }
       await animateSteps(base);
       showResults(base);
     } else {
@@ -364,27 +591,35 @@ async function runWorkflow(module) {
 // Cada plantilla define sus hojas como [nombre, filas]. La primera fila es
 // la cabecera; la segunda, una fila de ejemplo para guiar al usuario.
 const TEMPLATES = {
-  // Catering: 3 hojas (disponibilidad/encuesta, base de datos de camareros, eventos).
-  // Las columnas reproducen las hojas reales de Google Sheets del workflow.
-  catering: {
-    file: 'plantilla_catering.xlsx',
+  // Catering — archivo 1: base de datos de camareros (con email). Dato maestro
+  // que se sube una vez y se conserva en el navegador.
+  'catering-bd': {
+    file: 'plantilla_camareros_bd.xlsx',
+    sheets: [
+      ['Camareros', [
+        ['telefono', 'nombre', 'email', 'fecha_alta', 'antiguedad_dias', 'horas_trabajadas', 'nota',
+         'fecha_ultimo_evento', 'dias_desde_ultimo_evento', 'fecha_ultima_disponibilidad_si',
+         'dias_desde_ultima_disponibilidad_si', 'num_disponibilidades_si', 'num_respuestas',
+         'ratio_disponibilidad', 'num_disponibilidades_coche', 'activo', 'verificado',
+         'score_fiable', 'score_prometedor', 'score_general'],
+        ['625031064', 'Alicia Carmona Torres', 'alicia.carmona@cateringlaurel.es', '2021-04-14', 1970, 339, 9,
+         '2026-01-27', 131, '2026-05-10', 31, 12, 16, 0.74, 8, 'SI', 'SI', 0.95, 0.65, 0.85],
+      ]],
+    ],
+  },
+  // Catering — archivo 2: respuestas de disponibilidad + eventos a cubrir.
+  'catering-resp': {
+    file: 'plantilla_respuestas_eventos.xlsx',
     sheets: [
       ['Disponibilidad', [
         ['fecha_evento', 'telefono', 'nombre', 'disponible', 'tiene_coche', 'observaciones'],
         ['2026-06-20', '672574623', 'Daniel García López', 'SI', 'NO', 'Puedo ir al montaje'],
       ]],
-      ['Camareros', [
-        ['telefono', 'nombre', 'fecha_alta', 'antiguedad_dias', 'horas_trabajadas', 'nota',
-         'fecha_ultimo_evento', 'dias_desde_ultimo_evento', 'num_disponibilidades', 'num_respuestas',
-         'ratio_disponibilidad', 'activo', 'verificado', 'score_fiable', 'score_prometedor', 'score_general'],
-        ['625031064', 'Alicia Carmona Torres', '2021-04-14', 1970, 339, 9,
-         '2026-01-27', 131, 12, 16, 0.74, 'SI', 'SI', 0.95, 0.65, 0.85],
-      ]],
       ['Eventos', [
         ['event_id', 'fecha', 'hora_inicio', 'hora_fin', 'tipo', 'nombre_evento', 'ubicacion',
-         'asistentes', 'camareros_necesarios', 'estado', 'prioridad', 'observaciones'],
+         'asistentes', 'camareros_necesarios', 'estado', 'prioridad', 'observaciones', 'updated_at'],
         ['EVT001', '2026-06-20', '17:00', '23:00', 'boda', 'Boda Marta y Carlos', 'Finca Valdemorillo',
-         60, 6, 'NEW', 1, ''],
+         60, 6, 'NEW', 1, '', '2026-06-01'],
       ]],
     ],
   },
@@ -404,7 +639,7 @@ const TEMPLATES = {
     file: 'plantilla_software.xlsx',
     sheets: [
       ['Equipo', [
-        ['persona_id', 'nombre', 'rol', 'seniority', 'skills', 'capacidad_horas', 'disponibilidad', 'observacion'],
+        ['persona_id', 'nombre', 'rol', 'seniority', 'skills', 'capacidad_horas_semana', 'disponibilidad', 'observaciones'],
         ['P01', 'Ana', 'Frontend', 'Senior', 'React, TypeScript, CSS', 32, 'disponible', 'Buena para tareas críticas de frontend'],
       ]],
       ['Proyectos', [
@@ -481,15 +716,151 @@ function initHistorialFilters() {
   });
 }
 
-// Botones «Ver» del historial → abren el módulo y su pestaña de resultados
-function initHistoryView() {
-  document.querySelectorAll('.history-row .btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const mod = btn.closest('.history-row')?.dataset.module;
-      if (!mod) return;
-      gotoPage(mod);
-      showResults(mod);
-    });
+// ── Historial REAL de ejecuciones (persistido en localStorage) ────────────
+const HISTORY_KEY = 'smartassign-history';
+const MODULE_LABEL = { catering: 'Catering', guardias: 'Guardias', software: 'Software' };
+const MODULE_BADGE = { catering: 'badge-catering', guardias: 'badge-guardias', software: 'badge-software' };
+
+const History = {
+  sel: new Set(),   // ids seleccionados para comparar
+  all() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; } },
+  add(rec) {
+    const list = this.all();
+    rec.ts = Date.now();
+    rec.id = rec.id || (rec.module.slice(0, 3).toUpperCase() + '-' + rec.ts.toString(36).slice(-5).toUpperCase());
+    list.unshift(rec);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 100))); } catch (e) { console.warn('[historial] no se pudo guardar', e); }
+    renderHistory();
+    return rec;
+  },
+  clear() { localStorage.removeItem(HISTORY_KEY); this.sel.clear(); const c = document.getElementById('history-compare'); if (c) c.innerHTML = ''; },
+  toggleSel(id, on) { if (on) this.sel.add(id); else this.sel.delete(id); this._updateCompareBtn(); },
+  _updateCompareBtn() {
+    const b = document.getElementById('history-compare-btn');
+    if (b) { b.textContent = `Comparar (${this.sel.size})`; b.disabled = this.sel.size !== 2; }
+  },
+  compare() {
+    const recs = this.all().filter(r => this.sel.has(r.id));
+    if (recs.length === 2) renderComparison(recs[0], recs[1]);
+  },
+  // Reabre una ejecución guardada: re-renderiza sus resultados y va al módulo
+  view(id) {
+    const rec = this.all().find(r => r.id === id);
+    if (!rec) return;
+    try {
+      if (rec.module === 'catering' && window.DEMO) { buildCateringRecipients(rec.data); DEMO.renderCateringFromN8n(rec.data); }
+      else if (rec.module === 'software' && window.DEMO) { DEMO.renderSoftwareFromN8n(rec.data); }
+      else if (rec.module === 'guardias') { renderGuardiasFromN8n(rec.data, rec.periodo); }
+    } catch (e) { console.warn('[historial] error al reabrir', e); }
+    gotoPage(rec.module);
+    showResults(rec.module);
+  },
+};
+
+function fmtTs(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-ES') + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderHistory() {
+  const cont = document.getElementById('history-list');
+  const countEl = document.getElementById('history-count');
+  if (!cont) return;
+  const list = History.all();
+  if (countEl) countEl.textContent = `${list.length} ${list.length === 1 ? 'ejecución registrada' : 'ejecuciones registradas'}`;
+  if (!list.length) {
+    cont.innerHTML = '<div class="card-body"><p class="help-text">Aún no hay ejecuciones. Lanza un módulo con n8n y se registrarán aquí.</p></div>';
+    return;
+  }
+  const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+  cont.innerHTML = list.map(r => `
+    <div class="history-row" data-module="${r.module}" style="${activeFilter === 'all' || activeFilter === r.module ? '' : 'display:none;'}">
+      <input type="checkbox" class="hist-check" title="Seleccionar para comparar" onchange="History.toggleSel('${r.id}', this.checked)" ${History.sel.has(r.id) ? 'checked' : ''} style="margin-right:2px;" />
+      <span class="history-id">${escHtml(r.id)}</span>
+      <span class="badge ${MODULE_BADGE[r.module] || ''}">${MODULE_LABEL[r.module] || r.module}</span>
+      <div class="exec-info"><div class="exec-name">${escHtml(r.label || '')}</div><div class="exec-meta">${fmtTs(r.ts)} · ${escHtml(r.summary || '')}</div></div>
+      <span class="badge ${r.warn ? 'badge-warn' : 'badge-ok'}">${escHtml(r.warn || 'Completado')}</span>
+      <button class="btn btn-sm" onclick="History.view('${r.id}')">Ver</button>
+    </div>`).join('');
+  History._updateCompareBtn();
+}
+
+// Métricas clave de una ejecución, según su módulo (para comparar)
+function histMetrics(rec) {
+  const d = rec.data;
+  if (rec.module === 'catering') {
+    const l = Array.isArray(d) ? d : [];
+    const ev = new Set(l.map(r => r.event_id).filter(Boolean));
+    return { 'Asignaciones': l.length, 'Eventos': ev.size, 'Con coche': l.filter(r => r.tiene_coche === true || String(r.tiene_coche).toLowerCase() === 'true').length, 'Motor': l[0]?.origen_asignacion || '—' };
+  }
+  if (rec.module === 'software') {
+    const r = d.resumen || {};
+    return { 'Tareas asignadas': `${r.tareas_asignadas ?? 0}/${r.total_tareas ?? 0}`, 'Sin asignar': r.tareas_sin_asignar ?? 0, 'Horas asignadas': r.horas_totales_asignadas ?? 0 };
+  }
+  if (rec.module === 'guardias') {
+    const v = d.validacion || {};
+    return { 'Puestos cubiertos': `${d.total_puestos_cubiertos ?? 0}/${d.total_puestos_necesarios ?? 0}`, 'Huecos': d.total_huecos ?? 0, 'Violaciones duras': v.total_violaciones_hard ?? 0 };
+  }
+  return {};
+}
+
+function renderComparison(a, b) {
+  const cont = document.getElementById('history-compare');
+  if (!cont) return;
+  const sameModule = a.module === b.module;
+  const ma = histMetrics(a), mb = histMetrics(b);
+  const keys = [...new Set([...Object.keys(ma), ...Object.keys(mb)])];
+  const rows = sameModule
+    ? keys.map(k => {
+        const va = ma[k] ?? '—', vb = mb[k] ?? '—';
+        const diff = String(va) !== String(vb);
+        const st = diff ? ' style="font-weight:600;color:var(--teal-text);"' : '';
+        return `<tr><td>${escHtml(k)}</td><td${st}>${escHtml(String(va))}</td><td${st}>${escHtml(String(vb))}</td></tr>`;
+      }).join('')
+    : `<tr><td>Resumen</td><td>${escHtml(a.summary || '')}</td><td>${escHtml(b.summary || '')}</td></tr>`;
+  cont.innerHTML = `<div class="card" style="margin-bottom:16px;">
+    <div class="section-header"><div class="section-title">Comparación de ejecuciones</div>
+      <button class="btn btn-sm" onclick="document.getElementById('history-compare').innerHTML=''">Cerrar</button></div>
+    <table class="data-table">
+      <thead><tr><th>Métrica</th><th>${escHtml(a.id)}<br><span class="muted-val" style="font-weight:400;">${fmtTs(a.ts)}</span></th><th>${escHtml(b.id)}<br><span class="muted-val" style="font-weight:400;">${fmtTs(b.ts)}</span></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${sameModule ? '' : '<div class="card-body"><p class="help-text">Las dos ejecuciones son de módulos distintos; se compara solo el resumen.</p></div>'}
+  </div>`;
+}
+
+// Registradores por módulo (llamados tras una ejecución real con n8n)
+function registrarHistorialCatering(data) {
+  const list = Array.isArray(data) ? data : [];
+  const eventos = [...new Set(list.map(r => r.event_id).filter(Boolean))];
+  const conCoche = list.filter(r => r.tiene_coche === true || String(r.tiene_coche).toLowerCase() === 'true').length;
+  History.add({
+    module: 'catering',
+    label: `Eventos: ${eventos.join(', ') || '—'}`,
+    summary: `${list.length} camareros · ${eventos.length} evento(s) · ${conCoche} con coche · motor ${list[0]?.origen_asignacion || '—'}`,
+    data,
+  });
+}
+function registrarHistorialSoftware(data) {
+  const r = (data && data.resumen) || {};
+  const proy = (data && data.resumen_proyectos && data.resumen_proyectos[0]) ? data.resumen_proyectos[0].nombre : 'Asignación';
+  History.add({
+    module: 'software',
+    label: proy,
+    summary: `${r.tareas_asignadas ?? 0}/${r.total_tareas ?? 0} tareas asignadas · ${r.horas_totales_asignadas ?? 0}h`,
+    warn: r.tareas_sin_asignar ? `${r.tareas_sin_asignar} sin asignar` : '',
+    data,
+  });
+}
+function registrarHistorialGuardias(data, periodo) {
+  const v = (data && data.validacion) || {};
+  History.add({
+    module: 'guardias',
+    label: `Calendario ${periodo || ''}`.trim(),
+    summary: `${data.total_puestos_cubiertos ?? 0}/${data.total_puestos_necesarios ?? 0} puestos · ${v.total_violaciones_hard ?? 0} violaciones`,
+    warn: (v.total_violaciones_hard ? `${v.total_violaciones_hard} violaciones` : ''),
+    periodo,
+    data,
   });
 }
 
@@ -607,6 +978,219 @@ function buildCalendar() {
   container.innerHTML = html;
 }
 
+// ── Guardias con n8n: simulación (envío sin correos + calendario real CSP) ──
+const escHtml = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// RNG determinista por médico/mes → disponibilidades estables entre ejecuciones
+function seededRand(seed) {
+  let s = (seed >>> 0) || 1;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+// Genera la disponibilidad "como si el médico hubiera respondido por correo".
+// La crea la WEB internamente (oculta al usuario) para que la demo sea realista.
+function generarDisponibilidadMedico(m, year, month) {
+  const dias = new Date(year, month, 0).getDate();
+  const rnd = seededRand((Number(m.id) || 1) * 97 + month * 13 + (year % 100) * 7);
+  const pick = n => {
+    const set = new Set();
+    let guard = 0;
+    while (set.size < n && guard++ < 200) set.add(1 + Math.floor(rnd() * dias));
+    return [...set].map(d => toISO(new Date(year, month - 1, d)));
+  };
+  const noPuedo = pick(2 + Math.floor(rnd() * 3));                       // 2-4 días
+  const prefLibrar = pick(2).filter(f => !noPuedo.includes(f));
+  const prefGuardia = pick(2).filter(f => !noPuedo.includes(f) && !prefLibrar.includes(f));
+  const dobletes = rnd() > 0.6 ? pick(1) : [];
+  return {
+    medico_id: m.id, nombre_medico: m.nombre || m.cal, email_medico: m.email || '',
+    anio_residencia: m.anyo || m.anio_residencia || '', rotacion: m.rotacion || '', rotacion_externa: 'no',
+    objetivo_guardias: m.objetivo || 0, restricciones: '', observaciones: '',
+    no_puedo: noPuedo, preferiria_librar: prefLibrar, prefiere_guardia: prefGuardia, dobletes,
+  };
+}
+
+// Construye el payload para el webhook guardias-run: disponibilidades (internas)
+// + guardias necesarias (de la config de semanas) + periodo.
+function buildGuardiasSimData() {
+  const sel = document.getElementById('guardias-mes')?.value || '';
+  const { year, month } = parseMes(sel);
+  const medicos = (typeof DEMO_GUARDIAS !== 'undefined') ? DEMO_GUARDIAS.medicos : [];
+
+  const resBySemana = {};
+  document.querySelectorAll('#guardias-weeks [data-week]').forEach(s => {
+    resBySemana[Number(s.dataset.week)] = Number(s.value);
+  });
+
+  const guardias = [];
+  weeksOfMonth(year, month).forEach((w, i) => {
+    const residentes = resBySemana[i + 1] || 1;
+    for (let d = w.start; d <= w.end; d++) {
+      guardias.push({
+        fecha: toISO(new Date(year, month - 1, d)),
+        semana: `Semana ${i + 1}`,
+        num_guardias: residentes,
+        doble_residente: residentes >= 2,
+      });
+    }
+  });
+
+  const disponibilidades = medicos.map(m => generarDisponibilidadMedico(m, year, month));
+  return { periodo: sel, deadline: document.getElementById('guardias-deadline')?.value || '', disponibilidades, guardias };
+}
+
+// Mensaje de "envío simulado"
+function mensajeEnvioSimulado(data) {
+  const n = (data && data.recipients) ? data.recipients.length : 0;
+  return `✓ <strong>Simulado:</strong> se enviarían ${n} solicitudes de disponibilidad por correo ` +
+    `(no se envía nada realmente, no hay workflow de envío). Calendario generado con el solver CSP — ver pestaña <strong>Calendario</strong>.`;
+}
+
+// Pinta el grid del calendario para CUALQUIER mes a partir de las asignaciones
+function renderCalendarGrid(year, month, byFecha) {
+  const container = document.getElementById('calendar-jul-2026');
+  if (!container) return;
+  const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  const firstDayIndex = (new Date(year, month - 1, 1).getDay() + 6) % 7; // 0 = lunes
+  const totalDays = new Date(year, month, 0).getDate();
+  let html = days.map(d => `<div class="cal-header-cell">${d}</div>`).join('');
+  for (let i = 0; i < firstDayIndex; i++) html += `<div class="cal-day"></div>`;
+  for (let day = 1; day <= totalDays; day++) {
+    const iso = toISO(new Date(year, month - 1, day));
+    const g = byFecha[iso] || [];
+    const isDouble = g.length > 1;
+    html += `<div class="cal-day${g.length ? ' has-guard' : ''}"><div class="cal-day-num">${day}</div>` +
+      g.map(e => `<div class="cal-event${isDouble ? ' double' : ''}">${escHtml(e.n)}</div>`).join('') + `</div>`;
+  }
+  const rem = (firstDayIndex + totalDays) % 7;
+  if (rem !== 0) for (let i = 0; i < 7 - rem; i++) html += `<div class="cal-day"></div>`;
+  container.innerHTML = html;
+}
+
+// Renderiza el calendario REAL devuelto por el webhook guardias-run (solver CSP)
+function renderGuardiasFromN8n(data, periodoOverride) {
+  if (!data) return;
+  const sel = periodoOverride || document.getElementById('guardias-mes')?.value || '';
+  const { year, month } = parseMes(sel);
+  const asigs = (data.calendario && data.calendario.asignaciones) || [];
+  const resumen = data.resumen_medicos || [];
+  const medicos = (typeof DEMO_GUARDIAS !== 'undefined') ? DEMO_GUARDIAS.medicos : [];
+
+  const nameById = {}, rotById = {};
+  medicos.forEach(m => { nameById[String(m.id)] = m.nombre || m.cal; rotById[String(m.id)] = m.rotacion || ''; });
+  resumen.forEach(r => { if (!nameById[String(r.medico_id)]) nameById[String(r.medico_id)] = r.nombre_medico; });
+
+  const byFecha = {};
+  asigs.forEach(a => { byFecha[a.fecha] = (a.medico_ids || []).map(id => ({ n: nameById[String(id)] || ('#' + id) })); });
+  renderCalendarGrid(year, month, byFecha);
+
+  // Títulos
+  const t = document.getElementById('guardias-cal-title');
+  if (t) t.textContent = `Calendario ${sel || ''}`.trim();
+  const meta = document.getElementById('guardias-cal-meta');
+  if (meta) meta.textContent = `Generado con n8n · Solver CSP · ${data.total_puestos_cubiertos ?? 0}/${data.total_puestos_necesarios ?? 0} puestos cubiertos`;
+  const cm = document.getElementById('guardias-cal-month');
+  if (cm) cm.textContent = sel || '';
+
+  // Stats
+  const diasMes = new Date(year, month, 0).getDate();
+  const setT = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  setT('gd-stat-dias', diasMes);
+  setT('gd-stat-guardias', data.total_puestos_cubiertos ?? asigs.reduce((s, a) => s + (a.medico_ids || []).length, 0));
+  setT('gd-stat-cobertura', (data.total_puestos_necesarios ? Math.round((data.total_puestos_cubiertos / data.total_puestos_necesarios) * 100) : 0) + '%');
+  setT('gd-stat-violadas', (data.validacion && data.validacion.total_violaciones_hard) || 0);
+
+  // Resumen por médico
+  const colors = ['blue', 'teal', 'amber', 'coral'];
+  const rows = resumen.map((r, i) => {
+    const obj = r.objetivo_efectivo ?? r.objetivo_explicito ?? 0;
+    const asign = r.num_guardias_asignadas ?? 0;
+    const delta = r.diferencia_vs_objetivo ?? (asign - obj);
+    const badge = Math.abs(delta) < 0.5
+      ? '<span class="badge badge-ok">En objetivo</span>'
+      : `<span class="badge badge-warn">${delta > 0 ? '+' : ''}${delta}</span>`;
+    const ini = String(r.nombre_medico || '?').trim().charAt(0).toUpperCase();
+    return `<tr>
+      <td><div class="person-cell"><div class="avatar ${colors[i % colors.length]}">${escHtml(ini)}</div>${escHtml(r.nombre_medico)}</div></td>
+      <td>${escHtml(r.anio_residencia || '')}</td>
+      <td>${escHtml(rotById[String(r.medico_id)] || '')}</td>
+      <td><span class="mono-val">${asign}/${typeof obj === 'number' ? Math.round(obj * 10) / 10 : obj}</span></td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+  const tbody = document.getElementById('guardias-summary');
+  if (tbody) tbody.innerHTML = rows;
+
+  // Validación y advertencias
+  const v = data.validacion || {};
+  const head = v.valido_hard
+    ? '<div class="alert alert-info"><i class="ti ti-shield-check"></i><span>Validador determinista: 0 violaciones de restricciones duras (R1–R8).</span></div>'
+    : `<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>${(v.total_violaciones_hard || 0)} violaciones duras detectadas.</span></div>`;
+  const advs = (v.advertencias_soft || []).slice(0, 12).map(a => {
+    let msg = a.tipo;
+    if (a.tipo === 'MEDICO_BAJO_OBJETIVO') msg = `${a.nombre_medico}: ${a.asignadas}/${a.objetivo} guardias (${a.deficit} por debajo).`;
+    else if (a.tipo === 'MEDICO_SOBRE_OBJETIVO') msg = `${a.nombre_medico}: ${a.asignadas}/${a.objetivo} guardias (+${a.exceso}).`;
+    else if (a.tipo === 'ASIGNADO_EN_PREFERIRIA_LIBRAR') msg = `${a.nombre_medico}: guardia el ${a.fecha}, día que prefería librar.`;
+    else if (a.tipo === 'COBERTURA_NO_EXACTA') msg = `${a.fecha}: ${a.asignadas}/${a.esperadas} cubiertos (${a.huecos} hueco/s).`;
+    return `<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>${escHtml(msg)}</span></div>`;
+  }).join('');
+  // Nota explicativa: R2 a 0 porque no hay guardias dobles (restricción R8)
+  const r2cero = resumen.filter(r => String(r.anio_residencia) === 'R2' && (r.num_guardias_asignadas || 0) === 0);
+  const hayDobles = asigs.some(a => (a.medico_ids || []).length > 1);
+  const notaR8 = (r2cero.length && !hayDobles)
+    ? `<div class="alert alert-warn"><i class="ti ti-info-circle"></i><span><strong>${r2cero.length} residentes R2 con 0 guardias:</strong> por la restricción R8, los R2 solo pueden hacer guardias <strong>dobles</strong> (2 residentes/día). No hay ninguna semana configurada con 2 residentes, así que no pueden asignarse. Pon alguna semana en «2 residentes» para incluirlos.</span></div>`
+    : '';
+
+  const warn = document.getElementById('guardias-warnings');
+  if (warn) warn.innerHTML = head + notaR8 + (advs || '<div class="alert alert-info"><i class="ti ti-check"></i><span>Sin advertencias blandas.</span></div>');
+}
+
+// Paso 1: envío de solicitudes (SIMULADO, sin correos). No genera calendario.
+let guardiasSolicitudesEnviadas = false;
+function enviarSolicitudesGuardias() {
+  const statusEl = document.getElementById('guardias-run-status');
+  const set = html => { if (statusEl) statusEl.innerHTML = html; };
+  const error = validateModule('guardias-send');
+  if (error) { set(`⚠ ${error}`); return; }
+  const medicos = (typeof DEMO_GUARDIAS !== 'undefined') ? DEMO_GUARDIAS.medicos : [];
+  const n = medicos.filter(m => m.email).length;
+  guardiasSolicitudesEnviadas = true;
+  set(`✓ <strong>Simulado:</strong> se enviarían ${n} solicitudes de disponibilidad por correo (no se envía nada realmente). ` +
+      `Cuando "respondan", ve a <strong>Calendario</strong> y pulsa <em>«Leer respuestas y generar»</em>.`);
+  advanceStep('guardias', 2);
+  activateTab('guardias-tabs', 'guardias-calendario');
+}
+
+// Paso 2: leer respuestas (simulado) + generar el calendario con el CSP (n8n)
+async function leerRespuestasYGenerar() {
+  const statusEl = document.getElementById('guardias-gen-status');
+  const set = html => { if (statusEl) statusEl.innerHTML = html; };
+  if (!guardiasSolicitudesEnviadas) {
+    set('<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>Primero pulsa «Enviar solicitudes» en la pestaña Configurar.</span></div>');
+    return;
+  }
+  const error = validateModule('guardias-send');
+  if (error) { set(`<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>${escHtml(error)}</span></div>`); return; }
+
+  if (N8N.connected) {
+    set('<div class="alert alert-info"><span class="spinner"></span> <span>Leyendo respuestas y ejecutando el solver CSP en n8n… (puede tardar ~30 s)</span></div>');
+    const result = await N8N.call('guardias-send', buildGuardiasSimData());
+    if (result.ok) {
+      renderGuardiasFromN8n(result.data);
+      const v = result.data.validacion || {};
+      registrarHistorialGuardias(result.data, document.getElementById('guardias-mes')?.value || '');
+      set(`<div class="alert alert-info"><i class="ti ti-circle-check"></i><span><strong>Respuestas procesadas y calendario generado</strong> con el solver CSP: ` +
+          `${result.data.total_puestos_cubiertos}/${result.data.total_puestos_necesarios} puestos cubiertos, ${v.total_violaciones_hard ?? 0} violaciones duras.</span></div>`);
+    } else {
+      set(`<div class="alert alert-warn"><i class="ti ti-alert-triangle"></i><span>Error al generar: ${escHtml(result.error)}</span></div>`);
+    }
+  } else {
+    if (window.DEMO) DEMO.run('guardias');
+    buildCalendar();
+    set('<div class="alert alert-info"><i class="ti ti-info-circle"></i><span>Modo demo (n8n no conectado): mostrando calendario de ejemplo (julio 2026).</span></div>');
+  }
+}
+
 // ── Navegación por data-goto ─────────────────────────────────────
 function initGotoLinks() {
   document.querySelectorAll('[data-goto]').forEach(el => {
@@ -669,11 +1253,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs('guardias-tabs');
   initTabs('software-tabs');
 
-  // Filtros del historial
+  // Filtros del historial + render del historial real (localStorage)
   initHistorialFilters();
+  renderHistory();
 
-  // Botones «Ver» del historial
-  initHistoryView();
+  // Login: sembrar credencial por defecto (admin/admin) y mostrar pista
+  ensureDefaultUser();
 
   // Construir calendario
   buildCalendar();
@@ -685,6 +1270,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Tabla de médicos y estado de respuestas (12 residentes)
   renderGuardiasMedicos();
+
+  // Catering: restaurar la BD de camareros guardada y ajustar el estado de subida
+  initCatering();
 
   // Pre-rellenar las pestañas de resultados con el motor de demo
   if (window.DEMO) DEMO.init();

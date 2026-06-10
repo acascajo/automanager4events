@@ -22,13 +22,13 @@
       <div class="login-logo">SmartAssign</div>
       <div class="login-logo-sub">plataforma de asignación v1.0</div>
       <label class="login-label">Usuario</label>
-      <input class="login-input" type="text" id="login-user" placeholder="prueba" />
+      <input class="login-input" type="text" id="login-user" placeholder="admin" />
       <label class="login-label">Contraseña</label>
       <input class="login-input" type="password" id="login-pass" placeholder="••••••••" />
       <button class="btn btn-primary login-btn" id="login-btn">
         <i class="ti ti-login"></i> Iniciar sesión
       </button>
-      <p class="login-hint">Demo: usa cualquier usuario y contraseña</p>
+      <p class="login-hint" id="login-error"></p>
     </div>
   </div>
 
@@ -177,37 +177,54 @@
                 <div class="card">
                   <div class="section-header">
                     <div class="section-title">Datos de entrada</div>
-                    <button class="btn btn-sm" onclick="downloadTemplate('catering')"><i class="ti ti-download"></i> Descargar plantilla</button>
                   </div>
                   <div class="card-body">
-                    <p class="help-text">Descarga la plantilla Excel, rellénala con los datos del evento y súbela aquí.</p>
-                    <div class="upload-zone" id="catering-upload-zone" onclick="triggerUpload('catering')">
-                      <input type="file" id="catering-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleFileUpload(event,'catering')" />
-                      <div class="upload-icon"><i class="ti ti-file-spreadsheet"></i></div>
-                      <div class="upload-label">Haz clic para subir el archivo Excel</div>
-                      <div class="upload-hint">plantilla_catering.xlsx · máx. 5 MB</div>
+                    <p class="help-text">Sube dos archivos por separado: la base de datos de camareros y la plantilla con las respuestas de disponibilidad y los eventos.</p>
+
+                    <!-- 1. Base de datos de camareros -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                      <div class="config-label">1 · Base de datos de camareros</div>
+                      <button class="btn btn-sm" onclick="downloadTemplate('catering-bd')"><i class="ti ti-download"></i> Plantilla</button>
                     </div>
-                    <div class="file-info hidden" id="catering-file-info">
+                    <div class="upload-zone" id="catering-bd-upload-zone" onclick="triggerUpload('catering-bd')">
+                      <input type="file" id="catering-bd-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleCateringUpload(event,'bd')" />
+                      <div class="upload-icon"><i class="ti ti-database"></i></div>
+                      <div class="upload-label">Subir base de datos de camareros</div>
+                      <div class="upload-hint">plantilla_camareros_bd.xlsx</div>
+                    </div>
+                    <div class="file-info hidden" id="catering-bd-file-info">
                       <i class="ti ti-file-check" style="color:var(--success-text);font-size:18px;"></i>
                       <div style="flex:1;">
-                        <div class="file-info-name" id="catering-file-name">archivo.xlsx</div>
-                        <div class="file-info-meta" id="catering-file-meta">Listo para procesar</div>
+                        <div class="file-info-name" id="catering-bd-file-name">archivo.xlsx</div>
+                        <div class="file-info-meta" id="catering-bd-file-meta">Listo</div>
                       </div>
-                      <button class="btn btn-sm" onclick="removeFile('catering')"><i class="ti ti-x"></i></button>
+                      <button class="btn btn-sm" onclick="removeCateringFile('bd')"><i class="ti ti-x"></i></button>
                     </div>
-                  </div>
-                </div>
-                <div class="card">
-                  <div class="section-header"><div class="section-title">Parámetros de ejecución</div></div>
-                  <div class="card-body">
-                    <p class="help-text">Los eventos, sus requisitos (camareros necesarios, prioridad, vehículos…) y los camareros se definen en la plantilla. El motor de asignación (LLM con fallback heurístico) es automático.</p>
-                    <div class="config-row">
-                      <div><div class="config-label">Notificar asignaciones por email</div><div class="config-sub">Envía confirmación a los camareros</div></div>
-                      <input type="checkbox" id="catering-email" />
+
+                    <div class="section-divider"></div>
+
+                    <!-- 2. Respuestas de disponibilidad + eventos -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                      <div class="config-label">2 · Respuestas de disponibilidad y eventos</div>
+                      <button class="btn btn-sm" onclick="downloadTemplate('catering-resp')"><i class="ti ti-download"></i> Plantilla</button>
+                    </div>
+                    <div class="upload-zone" id="catering-resp-upload-zone" onclick="triggerUpload('catering-resp')">
+                      <input type="file" id="catering-resp-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleCateringUpload(event,'resp')" />
+                      <div class="upload-icon"><i class="ti ti-file-spreadsheet"></i></div>
+                      <div class="upload-label">Subir respuestas y eventos</div>
+                      <div class="upload-hint">plantilla_respuestas_eventos.xlsx</div>
+                    </div>
+                    <div class="file-info hidden" id="catering-resp-file-info">
+                      <i class="ti ti-file-check" style="color:var(--success-text);font-size:18px;"></i>
+                      <div style="flex:1;">
+                        <div class="file-info-name" id="catering-resp-file-name">archivo.xlsx</div>
+                        <div class="file-info-meta" id="catering-resp-file-meta">Listo</div>
+                      </div>
+                      <button class="btn btn-sm" onclick="removeCateringFile('resp')"><i class="ti ti-x"></i></button>
                     </div>
                   </div>
                   <div class="run-footer">
-                    <div class="run-status" id="catering-run-status">Sube el archivo para continuar</div>
+                    <div class="run-status" id="catering-run-status">Sube los dos archivos para continuar</div>
                     <button class="btn btn-primary" id="catering-run-btn" onclick="runWorkflow('catering')" disabled>
                       <i class="ti ti-bolt"></i> Lanzar con n8n
                     </button>
@@ -228,13 +245,13 @@
                   </div>
                 </div>
                 <div class="card">
-                  <div class="section-header"><div class="section-title">Plantilla Excel</div></div>
+                  <div class="section-header"><div class="section-title">Plantillas Excel</div></div>
                   <div class="card-body">
-                    <p class="help-text" style="margin-bottom:10px;">La plantilla contiene 3 hojas:</p>
+                    <p class="help-text" style="margin-bottom:10px;">Dos archivos independientes:</p>
                     <div class="sheet-list">
-                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 1: Disponibilidad camareros</div>
-                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 2: Base de datos camareros</div>
-                      <div class="sheet-item"><i class="ti ti-table"></i> Hoja 3: Eventos y requisitos</div>
+                      <div class="sheet-item"><i class="ti ti-database"></i> BD camareros: hoja <strong>Camareros</strong> (incluye email)</div>
+                      <div class="sheet-item"><i class="ti ti-table"></i> Respuestas: hoja <strong>Disponibilidad</strong></div>
+                      <div class="sheet-item"><i class="ti ti-table"></i> Respuestas: hoja <strong>Eventos</strong></div>
                     </div>
                   </div>
                 </div>
@@ -268,6 +285,14 @@
             <div class="card">
               <div class="section-header"><div class="section-title">Validación y advertencias</div></div>
               <div class="card-body" id="catering-results-alerts"></div>
+            </div>
+            <div class="card">
+              <div class="section-header"><div class="section-title">Notificación a camareros</div></div>
+              <div class="card-body">
+                <p class="help-text" style="margin-bottom:12px;">Una vez revisadas y aceptadas las asignaciones, notifica por correo a cada camarero asignado.</p>
+                <button class="btn btn-primary" onclick="sendCateringEmails()"><i class="ti ti-mail"></i> Aceptar y enviar por correo</button>
+                <div id="catering-email-result" style="margin-top:12px;"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -323,7 +348,7 @@
                   </div>
                   <div class="run-footer">
                     <div class="run-status" id="guardias-run-status">Configura el periodo y envía las solicitudes</div>
-                    <button class="btn btn-primary" onclick="runWorkflow('guardias-send')"><i class="ti ti-mail"></i> Enviar solicitudes</button>
+                    <button class="btn btn-primary" onclick="enviarSolicitudesGuardias()"><i class="ti ti-mail"></i> Enviar solicitudes</button>
                   </div>
                 </div>
               </div>
@@ -357,14 +382,15 @@
           <div id="guardias-calendario" class="tab-panel hidden">
             <div class="results-header">
               <div>
-                <div class="results-title">Calendario julio 2026</div>
-                <div class="results-meta">Generado ayer · Solver CSP · ID: MED-2026-007</div>
+                <div class="results-title" id="guardias-cal-title">Calendario julio 2026</div>
+                <div class="results-meta" id="guardias-cal-meta">Generado ayer · Solver CSP · ID: MED-2026-007</div>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-primary btn-sm" onclick="leerRespuestasYGenerar()"><i class="ti ti-mail-opened"></i> Leer respuestas y generar</button>
                 <button class="btn btn-sm" onclick="exportResults('guardias')"><i class="ti ti-download"></i> Exportar</button>
-                <span class="badge badge-ok" style="padding:6px 12px;">Completado</span>
               </div>
             </div>
+            <div id="guardias-gen-status" style="margin-bottom:12px;"></div>
             <div class="result-stats" style="margin-bottom:16px;">
               <div class="stat-card"><div class="stat-label">Días planificados</div><div class="stat-value" id="gd-stat-dias">—</div></div>
               <div class="stat-card"><div class="stat-label">Guardias totales</div><div class="stat-value" id="gd-stat-guardias">—</div></div>
@@ -373,7 +399,7 @@
             </div>
             <div class="card">
               <div class="section-header">
-                <div class="section-title">Julio 2026</div>
+                <div class="section-title" id="guardias-cal-month">Julio 2026</div>
                 <div style="display:flex;gap:12px;font-size:11px;align-items:center;">
                   <span class="cal-legend"><span class="cal-dot single"></span> 1 residente</span>
                   <span class="cal-legend"><span class="cal-dot double"></span> 2 residentes</span>
@@ -540,12 +566,15 @@
             <button class="filter-btn" data-filter="software">Software</button>
           </div>
           <div class="card">
-            <div class="section-header"><div class="section-title">24 ejecuciones registradas</div></div>
-            <div class="history-row" data-module="catering"><span class="history-id">CAT-014</span><span class="badge badge-catering">Catering</span><div class="exec-info"><div class="exec-name">Gala Madrid · 14 jun 2026</div><div class="exec-meta">06/06/2026 · 12 asignados · 2 avisos</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
-            <div class="history-row" data-module="guardias"><span class="history-id">MED-007</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Julio 2026</div><div class="exec-meta">05/06/2026 · 12 residentes · sem. 2 y 4 con 2 residentes/día</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
-            <div class="history-row" data-module="software"><span class="history-id">SW-011</span><span class="badge badge-software">Software</span><div class="exec-info"><div class="exec-name">Sprint 14 — Backend</div><div class="exec-meta">03/06/2026 · 6 tareas · 4 devs</div></div><span class="badge badge-warn">2 avisos</span><button class="btn btn-sm">Ver</button></div>
-            <div class="history-row" data-module="catering"><span class="history-id">CAT-013</span><span class="badge badge-catering">Catering</span><div class="exec-info"><div class="exec-name">Cóctel corporativo · 28 may</div><div class="exec-meta">25/05/2026 · 8 asignados · 0 avisos</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
-            <div class="history-row" data-module="guardias"><span class="history-id">MED-006</span><span class="badge badge-guardias">Guardias</span><div class="exec-info"><div class="exec-name">Junio 2026</div><div class="exec-meta">28/05/2026 · 12 residentes · sem. 1 y 3 con 2 residentes/día</div></div><span class="badge badge-ok">Completado</span><button class="btn btn-sm">Ver</button></div>
+            <div class="section-header">
+              <div class="section-title" id="history-count">0 ejecuciones registradas</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-sm" id="history-compare-btn" onclick="History.compare()" disabled>Comparar (0)</button>
+                <button class="btn btn-sm" onclick="History.clear(); renderHistory();"><i class="ti ti-trash"></i> Limpiar</button>
+              </div>
+            </div>
+            <div id="history-compare"></div>
+            <div id="history-list"></div>
           </div>
         </div>
 
@@ -580,7 +609,7 @@
                   </div>
                   <div class="webhook-row">
                     <span class="webhook-label blue-text">● Guardias envío</span>
-                    <input class="webhook-input" id="wh-guardias-send" placeholder="/webhook/guardias-send" />
+                    <input class="webhook-input" id="wh-guardias-send" placeholder="/webhook/guardias-run" />
                   </div>
                   <div class="webhook-row">
                     <span class="webhook-label amber-text">● Software</span>

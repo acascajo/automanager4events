@@ -18,7 +18,7 @@ const N8N = (() => {
     baseUrl:   '',
     webhooks:  {
       'catering':      '/webhook/catering-assign',
-      'guardias-send': '/webhook/guardias-send',
+      'guardias-send': '/webhook/guardias-run',
       'software':      '/webhook/software-assign',
     }
   };
@@ -114,7 +114,7 @@ const N8N = (() => {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(payload),
-        signal:  AbortSignal.timeout(30000), // workflows pueden tardar
+        signal:  AbortSignal.timeout(120000), // workflows reales (LLM + Sheets) pueden tardar ~1-2 min
       });
 
       const text = await res.text();
@@ -130,7 +130,7 @@ const N8N = (() => {
 
     } catch (err) {
       if (err.name === 'TimeoutError') {
-        return { ok: false, error: 'El workflow tardó demasiado (>30 s). Revisa n8n.' };
+        return { ok: false, error: 'El workflow tardó demasiado (>120 s). Revisa n8n.' };
       }
       return { ok: false, error: err.message };
     }
@@ -166,7 +166,7 @@ const N8N = (() => {
   function autoFillPaths() {
     const map = {
       'wh-catering':      '/webhook/catering-assign',
-      'wh-guardias-send': '/webhook/guardias-send',
+      'wh-guardias-send': '/webhook/guardias-run',
       'wh-software':      '/webhook/software-assign',
     };
     Object.entries(map).forEach(([id, path]) => {
