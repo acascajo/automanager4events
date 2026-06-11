@@ -26,8 +26,9 @@ function gotoPage(page) {
   document.getElementById('topbar-bc').textContent = PAGE_LABELS[page] || page;
 }
 
-// ── Login / Logout (autenticación real: credencial con hash en localStorage) ──
+// ── Login / Registro / Logout (autenticación real: credencial con hash) ──
 const AUTH_KEY = 'smartassign-auth';
+const PREFILL_KEY = 'smartassign-login-prefill';   // autocompletado del login (prototipo)
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -38,9 +39,51 @@ async function sha256(str) {
 async function ensureDefaultUser() {
   if (!localStorage.getItem(AUTH_KEY)) {
     localStorage.setItem(AUTH_KEY, JSON.stringify({ user: 'admin', hash: await sha256('admin') }));
+    if (!localStorage.getItem(PREFILL_KEY)) localStorage.setItem(PREFILL_KEY, JSON.stringify({ user: 'admin', pass: 'admin' }));
   }
+  prefillLogin();
+}
+
+// Autocompleta el login con las últimas credenciales (o las de por defecto)
+function prefillLogin() {
+  let pf = null;
+  try { pf = JSON.parse(localStorage.getItem(PREFILL_KEY) || 'null'); } catch (e) {}
+  const u = document.getElementById('login-user'), p = document.getElementById('login-pass');
+  if (pf && u) u.value = pf.user || '';
+  if (pf && p) p.value = pf.pass || '';
   const err = document.getElementById('login-error');
   if (err && !err.textContent) { err.style.color = 'var(--muted-text, #889)'; err.textContent = 'Credenciales por defecto: admin / admin'; }
+}
+
+// Registro de un nuevo usuario (sustituye la credencial y autocompleta el login)
+async function doRegister() {
+  const user = document.getElementById('reg-user').value.trim();
+  const p1 = document.getElementById('reg-pass').value;
+  const p2 = document.getElementById('reg-pass2').value;
+  const errEl = document.getElementById('register-error');
+  const setErr = m => { if (errEl) { errEl.style.color = 'var(--danger-text)'; errEl.textContent = m; } };
+  if (!user || !p1) { setErr('Usuario y contraseña obligatorios.'); return; }
+  if (p1.length < 4) { setErr('La contraseña debe tener al menos 4 caracteres.'); return; }
+  if (p1 !== p2) { setErr('Las contraseñas no coinciden.'); return; }
+
+  localStorage.setItem(AUTH_KEY, JSON.stringify({ user, hash: await sha256(p1) }));
+  localStorage.setItem(PREFILL_KEY, JSON.stringify({ user, pass: p1 }));
+
+  showLoginForm();
+  document.getElementById('login-user').value = user;
+  document.getElementById('login-pass').value = p1;
+  const le = document.getElementById('login-error');
+  if (le) { le.style.color = 'var(--teal-text)'; le.textContent = 'Cuenta creada. Ya puedes iniciar sesión.'; }
+}
+
+function showRegisterForm() {
+  document.getElementById('login-form').classList.add('hidden');
+  document.getElementById('register-form').classList.remove('hidden');
+  const e = document.getElementById('register-error'); if (e) e.textContent = '';
+}
+function showLoginForm() {
+  document.getElementById('register-form').classList.add('hidden');
+  document.getElementById('login-form').classList.remove('hidden');
 }
 
 function enterApp(user) {
@@ -68,6 +111,7 @@ async function doLogin() {
 
   if (errEl) errEl.textContent = '';
   sessionStorage.setItem('smartassign-session', user);
+  localStorage.setItem(PREFILL_KEY, JSON.stringify({ user, pass }));   // recordar para autocompletar
   enterApp(user);
 }
 
@@ -500,6 +544,56 @@ function validateModule(module) {
   return null;
 }
 
+// Validación de FORMATO de la plantilla: detecta entradas mal formateadas
+// (hojas vacías, columnas obligatorias ausentes, valores no numéricos) antes
+// de lanzar el workflow. Devuelve un mensaje de error comprensible o null.
+function validateDataFormat(module) {
+  const base = module.split('-')[0];
+
+  // Comprueba que la hoja existe, no está vacía y contiene las columnas obligatorias
+  const reqCols = (rows, sheet, cols) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return `la hoja «${sheet}» está vacía o no existe en la plantilla`;
+    }
+    const present = Object.keys(rows[0] || {});
+    const missing = cols.filter(c => !present.includes(c));
+    if (missing.length) {
+      return `a la hoja «${sheet}» le falta(n) la(s) columna(s) obligatoria(s) ${missing.map(c => `«${c}»`).join(', ')}`;
+    }
+    return null;
+  };
+
+  // Comprueba que una columna que debe ser numérica no contiene texto
+  const reqNum = (rows, sheet, col) => {
+    for (let i = 0; i < (rows || []).length; i++) {
+      const v = rows[i][col];
+      if (v === '' || v === null || v === undefined) continue; // vacío lo gestiona el motor
+      if (isNaN(Number(v))) {
+        return `la hoja «${sheet}» tiene un valor no numérico en la columna «${col}» (fila ${i + 2}: «${v}»)`;
+      }
+    }
+    return null;
+  };
+
+  if (base === 'software') {
+    const d = UPLOADED.software || {};
+    return reqCols(d.equipo, 'Equipo', ['persona_id', 'nombre', 'skills', 'capacidad_horas_semana'])
+        || reqCols(d.proyectos, 'Proyectos', ['proyecto_id', 'nombre'])
+        || reqCols(d.tareas, 'Tareas', ['tarea_id', 'nombre', 'skills_requeridas', 'horas_estimadas'])
+        || reqNum(d.equipo, 'Equipo', 'capacidad_horas_semana')
+        || reqNum(d.tareas, 'Tareas', 'horas_estimadas');
+  }
+
+  if (base === 'catering') {
+    const d = UPLOADED.catering || {};
+    return reqCols(d.camareros, 'Camareros', ['telefono', 'nombre'])
+        || reqCols(d.disponibilidad, 'Disponibilidad', ['telefono'])
+        || reqCols(d.eventos, 'Eventos', ['event_id']);
+  }
+
+  return null; // guardias: los datos se generan internamente, no hay plantilla que validar
+}
+
 // Anima el indicador de pasos de 0 a N para dar feedback visual
 async function animateSteps(base) {
   const container = document.getElementById(base + '-steps');
@@ -532,6 +626,26 @@ async function runWorkflow(module) {
   // 1. Validación de campos obligatorios
   const error = validateModule(module);
   if (error) { setStatus(`⚠ ${error}`); return; }
+
+  // 1b. Validación de FORMATO de la plantilla → si está mal formateada, salida de fallo
+  //     (no se ejecuta ningún workflow ni se genera ninguna asignación)
+  const fmtError = validateDataFormat(module);
+  if (fmtError) {
+    setStatus(
+      '<div class="alert alert-danger"><i class="ti ti-file-alert"></i><span>' +
+      `<strong>Plantilla no válida.</strong> El proceso se ha detenido porque ${escHtml(fmtError)}. ` +
+      'Revisa que la plantilla siga el formato esperado. No se ha generado ninguna asignación.</span></div>'
+    );
+    // Registrar el error en el historial de forma comprensible
+    History.add({
+      module: base,
+      label: 'Ejecución rechazada',
+      summary: `Plantilla no válida: ${fmtError}`,
+      warn: 'Error de formato',
+      error: fmtError,
+    });
+    return;
+  }
 
   const payload = buildPayload(module);
   if (runBtn) runBtn.disabled = true;
@@ -747,6 +861,7 @@ const History = {
   view(id) {
     const rec = this.all().find(r => r.id === id);
     if (!rec) return;
+    if (rec.error) { gotoPage(rec.module); return; } // ejecución rechazada: no hay resultados que reabrir
     try {
       if (rec.module === 'catering' && window.DEMO) { buildCateringRecipients(rec.data); DEMO.renderCateringFromN8n(rec.data); }
       else if (rec.module === 'software' && window.DEMO) { DEMO.renderSoftwareFromN8n(rec.data); }
@@ -779,7 +894,7 @@ function renderHistory() {
       <span class="history-id">${escHtml(r.id)}</span>
       <span class="badge ${MODULE_BADGE[r.module] || ''}">${MODULE_LABEL[r.module] || r.module}</span>
       <div class="exec-info"><div class="exec-name">${escHtml(r.label || '')}</div><div class="exec-meta">${fmtTs(r.ts)} · ${escHtml(r.summary || '')}</div></div>
-      <span class="badge ${r.warn ? 'badge-warn' : 'badge-ok'}">${escHtml(r.warn || 'Completado')}</span>
+      <span class="badge ${r.error ? 'badge-danger' : (r.warn ? 'badge-warn' : 'badge-ok')}">${escHtml(r.warn || 'Completado')}</span>
       <button class="btn btn-sm" onclick="History.view('${r.id}')">Ver</button>
     </div>`).join('');
   History._updateCompareBtn();
@@ -1239,6 +1354,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') doLogin();
   });
   document.getElementById('logout-btn').addEventListener('click', doLogout);
+
+  // Registro: alternar formularios + crear cuenta
+  document.getElementById('show-register').addEventListener('click', e => { e.preventDefault(); showRegisterForm(); });
+  document.getElementById('show-login').addEventListener('click', e => { e.preventDefault(); showLoginForm(); });
+  document.getElementById('register-btn').addEventListener('click', doRegister);
+  document.getElementById('reg-pass2').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
 
   // Navegación sidebar
   document.querySelectorAll('.nav-item[data-page]').forEach(btn => {

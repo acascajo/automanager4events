@@ -21,14 +21,32 @@
     <div class="login-card">
       <div class="login-logo">SmartAssign</div>
       <div class="login-logo-sub">plataforma de asignación v1.0</div>
-      <label class="login-label">Usuario</label>
-      <input class="login-input" type="text" id="login-user" placeholder="admin" />
-      <label class="login-label">Contraseña</label>
-      <input class="login-input" type="password" id="login-pass" placeholder="••••••••" />
-      <button class="btn btn-primary login-btn" id="login-btn">
-        <i class="ti ti-login"></i> Iniciar sesión
-      </button>
-      <p class="login-hint" id="login-error"></p>
+
+      <div id="login-form">
+        <label class="login-label">Usuario</label>
+        <input class="login-input" type="text" id="login-user" placeholder="admin" />
+        <label class="login-label">Contraseña</label>
+        <input class="login-input" type="password" id="login-pass" placeholder="••••••••" />
+        <button class="btn btn-primary login-btn" id="login-btn">
+          <i class="ti ti-login"></i> Iniciar sesión
+        </button>
+        <p class="login-hint" id="login-error"></p>
+        <p class="login-hint">¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a></p>
+      </div>
+
+      <div id="register-form" class="hidden">
+        <label class="login-label">Nuevo usuario</label>
+        <input class="login-input" type="text" id="reg-user" />
+        <label class="login-label">Contraseña</label>
+        <input class="login-input" type="password" id="reg-pass" />
+        <label class="login-label">Repite la contraseña</label>
+        <input class="login-input" type="password" id="reg-pass2" />
+        <button class="btn btn-primary login-btn" id="register-btn">
+          <i class="ti ti-user-plus"></i> Crear cuenta
+        </button>
+        <p class="login-hint" id="register-error"></p>
+        <p class="login-hint">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
+      </div>
     </div>
   </div>
 
