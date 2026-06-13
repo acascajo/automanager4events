@@ -1,0 +1,121 @@
+{
+  "name": "Historial (Web)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "historial",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "6d8b45aa-995d-481e-b864-c3b606b27dfd",
+      "name": "Webhook historial",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        600,
+        400
+      ],
+      "webhookId": "6d8b45aa-995d-481e-b864-c3b606b27dfd"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "19C3xzHI760fYkpNHh1_VI1bkIJNpvuP2Y8u_87f4dmo",
+          "mode": "list",
+          "cachedResultName": "SmartAssign",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19C3xzHI760fYkpNHh1_VI1bkIJNpvuP2Y8u_87f4dmo/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Historial",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "6823d263-99ef-4bdb-b244-ac0ef5302fbd",
+      "name": "Leer Historial",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        820,
+        400
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agrupa las filas por exec_id, ordena por idx, concatena los chunks y parsea el JSON\nconst rows = $input.all().map(i => i.json);\nconst byId = {};\nfor (const r of rows) {\n  const id = r.exec_id; if (!id) continue;\n  (byId[id] = byId[id] || []).push(r);\n}\nconst list = Object.entries(byId).map(([id, rs]) => {\n  rs.sort((a, b) => Number(a.idx) - Number(b.idx));\n  const full = rs.map(r => r.chunk).join(\"\");\n  let data = null; try { data = JSON.parse(full); } catch (e) {}\n  const meta = rs[0];\n  return { id, module: meta.modulo, ts: Date.parse(meta.fecha) || 0, label: meta.etiqueta || \"\", summary: meta.resumen || \"\", data };\n});\nlist.sort((a, b) => b.ts - a.ts);\nreturn [{ json: { historial: list } }];"
+      },
+      "id": "5d86dfac-1516-4816-ada0-ac2ce8e362cd",
+      "name": "Reconstruir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "firstIncomingItem",
+        "options": {}
+      },
+      "id": "3937f731-343b-4ca5-9703-6e1ca552ac35",
+      "name": "Responder historial",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook historial": {
+      "main": [
+        [
+          {
+            "node": "Leer Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Historial": {
+      "main": [
+        [
+          {
+            "node": "Reconstruir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reconstruir": {
+      "main": [
+        [
+          {
+            "node": "Responder historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

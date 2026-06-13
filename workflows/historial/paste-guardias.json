@@ -1,0 +1,68 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Construye filas para la hoja Historial (chunked para evitar el límite de celda)\nconst items = $input.all();\nconst data = items.length > 1 ? items.map(i => i.json) : (items[0] ? items[0].json : {});\n\nconst modulo = \"guardias\";\nconst fecha = new Date().toISOString();\nconst exec_id = modulo.slice(0,3).toUpperCase() + \"-\" + Date.now().toString(36).slice(-5).toUpperCase();\n\nlet etiqueta = \"Asignación\", resumen = \"\";\ntry {\n  if (modulo === \"software\") {\n    const rs = data.resumen || {};\n    etiqueta = (data.resumen_proyectos && data.resumen_proyectos[0] && data.resumen_proyectos[0].nombre) || \"Asignación\";\n    resumen = (rs.tareas_asignadas ?? 0) + \"/\" + (rs.total_tareas ?? 0) + \" tareas · \" + (rs.horas_totales_asignadas ?? 0) + \"h\";\n  } else if (modulo === \"guardias\") {\n    const v = data.validacion || {};\n    etiqueta = (\"Calendario \" + (data.periodo || \"\")).trim();\n    resumen = (data.total_puestos_cubiertos ?? 0) + \"/\" + (data.total_puestos_necesarios ?? 0) + \" puestos · \" + (v.total_violaciones_hard ?? 0) + \" violaciones\";\n  } else {\n    const list = Array.isArray(data) ? data : [];\n    const eventos = [...new Set(list.map(r => r.event_id).filter(Boolean))];\n    etiqueta = \"Eventos: \" + (eventos.join(\", \") || \"—\");\n    resumen = list.length + \" camareros · \" + eventos.length + \" evento(s)\";\n  }\n} catch (e) {}\n\nconst full = JSON.stringify(data);\nconst SIZE = 40000;\nconst chunks = [];\nfor (let i = 0; i < full.length; i += SIZE) chunks.push(full.slice(i, i + SIZE));\nif (!chunks.length) chunks.push(\"\");\n\nreturn chunks.map((chunk, idx) => ({ json: { exec_id, modulo, fecha, etiqueta, resumen, idx, total: chunks.length, chunk } }));"
+      },
+      "id": "bd453e22-ee1c-4bce-a511-1da61ac6929f",
+      "name": "Prep historial",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "19C3xzHI760fYkpNHh1_VI1bkIJNpvuP2Y8u_87f4dmo",
+          "mode": "list",
+          "cachedResultName": "SmartAssign",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19C3xzHI760fYkpNHh1_VI1bkIJNpvuP2Y8u_87f4dmo/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Historial",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "aa1f332c-41f5-41d6-8f59-bdc55e9f5613",
+      "name": "Guardar en Sheets (Historial)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1820,
+        600
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hFR90SOt5vNH1Zry",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Prep historial": {
+      "main": [
+        [
+          {
+            "node": "Guardar en Sheets (Historial)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

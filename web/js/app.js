@@ -24,6 +24,9 @@ function gotoPage(page) {
   if (navEl)  navEl.classList.add('active');
 
   document.getElementById('topbar-bc').textContent = PAGE_LABELS[page] || page;
+
+  // Al abrir el historial, refrescar desde Google Sheets (fuente de verdad)
+  if (page === 'history' && typeof History !== 'undefined') History.load();
 }
 
 // ── Login / Registro / Logout (autenticación real: credencial con hash) ──
@@ -845,7 +848,27 @@ const History = {
     list.unshift(rec);
     try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 100))); } catch (e) { console.warn('[historial] no se pudo guardar', e); }
     renderHistory();
+    // Una ejecución correcta se persiste en Google Sheets desde el propio workflow;
+    // tras un margen, resincronizamos el historial desde Sheets (fuente de verdad).
+    if (!rec.error && N8N.connected) setTimeout(() => this.load(), 2500);
     return rec;
+  },
+  // Lee el historial desde Google Sheets (vía webhook de n8n) y lo fusiona con los
+  // registros locales que NO se persisten en Sheets (p. ej. ejecuciones rechazadas
+  // por error de formato). Si n8n/Sheets no responde, se conserva el historial local.
+  async load() {
+    try {
+      const res = await N8N.call('historial', {});
+      if (!res.ok || !res.data || !Array.isArray(res.data.historial)) return;
+      const sheets = res.data.historial.map(r => ({
+        id: r.id, module: r.module, ts: r.ts, label: r.label, summary: r.summary,
+        data: r.data, periodo: r.data && r.data.periodo, warn: '',
+      }));
+      const localErrors = this.all().filter(r => r.error);
+      const merged = [...sheets, ...localErrors].sort((a, b) => b.ts - a.ts);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(merged.slice(0, 100))); } catch (e) {}
+      renderHistory();
+    } catch (e) { console.warn('[historial] no se pudo leer de Sheets', e); }
   },
   clear() { localStorage.removeItem(HISTORY_KEY); this.sel.clear(); const c = document.getElementById('history-compare'); if (c) c.innerHTML = ''; },
   toggleSel(id, on) { if (on) this.sel.add(id); else this.sel.delete(id); this._updateCompareBtn(); },
@@ -1374,9 +1397,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs('guardias-tabs');
   initTabs('software-tabs');
 
-  // Filtros del historial + render del historial real (localStorage)
+  // Filtros del historial + render del historial real (localStorage como caché)
   initHistorialFilters();
   renderHistory();
+  // Refrescar desde Google Sheets si n8n está conectado (fuente de verdad)
+  History.load();
 
   // Login: sembrar credencial por defecto (admin/admin) y mostrar pista
   ensureDefaultUser();

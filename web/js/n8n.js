@@ -20,6 +20,7 @@ const N8N = (() => {
       'catering':      '/webhook/catering-assign',
       'guardias-send': '/webhook/guardias-run',
       'software':      '/webhook/software-assign',
+      'historial':     '/webhook/historial',
     }
   };
 
