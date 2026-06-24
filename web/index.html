@@ -19,8 +19,9 @@
   ════════════════════════════════════════ -->
   <div id="screen-login" class="login-wrap">
     <div class="login-card">
+      <div class="login-mark"><i class="ti ti-layout-grid"></i></div>
       <div class="login-logo">SmartAssign</div>
-      <div class="login-logo-sub">plataforma de asignación v1.0</div>
+      <div class="login-logo-sub">Plataforma de asignación de recursos</div>
 
       <div id="login-form">
         <label class="login-label">Usuario</label>
@@ -152,6 +153,29 @@
                 <div class="module-stat"><strong>1</strong>este mes</div>
               </div>
             </div>
+
+            <!-- Casos futuros (deshabilitados) -->
+            <div class="module-card soon">
+              <div class="module-card-accent accent-muted"></div>
+              <span class="module-soon-badge">Próximamente</span>
+              <div class="module-icon icon-muted"><i class="ti ti-school"></i></div>
+              <div class="module-title">Aulas y horarios</div>
+              <div class="module-desc">Asignación de aulas y franjas horarias a grupos y docentes según capacidad y solapamientos.</div>
+            </div>
+            <div class="module-card soon">
+              <div class="module-card-accent accent-muted"></div>
+              <span class="module-soon-badge">Próximamente</span>
+              <div class="module-icon icon-muted"><i class="ti ti-headset"></i></div>
+              <div class="module-title">Turnos de atención</div>
+              <div class="module-desc">Planificación de turnos de soporte y atención al cliente cubriendo la demanda de cada franja.</div>
+            </div>
+            <div class="module-card soon">
+              <div class="module-card-accent accent-muted"></div>
+              <span class="module-soon-badge">Próximamente</span>
+              <div class="module-icon icon-muted"><i class="ti ti-truck-delivery"></i></div>
+              <div class="module-title">Rutas de reparto</div>
+              <div class="module-desc">Asignación de pedidos y rutas a repartidores según zona, carga y disponibilidad de vehículo.</div>
+            </div>
           </div>
           <div class="card">
             <div class="section-header">
@@ -178,12 +202,14 @@
 
         <!-- CATERING -->
         <div id="page-catering" class="page hidden">
-          <div class="page-header">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-              <span class="module-dot dot-catering"></span>
-              <div class="page-title" style="margin-bottom:0;">Catering</div>
+          <div class="page-header module-header mod-catering">
+            <div class="module-head">
+              <div class="module-head-icon icon-teal"><i class="ti ti-tools-kitchen-2"></i></div>
+              <div>
+                <div class="page-title" style="margin-bottom:2px;">Catering</div>
+                <div class="page-sub">Asignación de camareros a eventos de catering</div>
+              </div>
             </div>
-            <div class="page-sub">Asignación de camareros a eventos de catering</div>
           </div>
           <div class="tabs" id="catering-tabs">
             <button class="tab active" data-tab="catering-preparar">Preparar asignación</button>
@@ -317,12 +343,14 @@
 
         <!-- GUARDIAS -->
         <div id="page-guardias" class="page hidden">
-          <div class="page-header">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-              <span class="module-dot dot-guardias"></span>
-              <div class="page-title" style="margin-bottom:0;">Guardias médicas</div>
+          <div class="page-header module-header mod-guardias">
+            <div class="module-head">
+              <div class="module-head-icon icon-blue"><i class="ti ti-stethoscope"></i></div>
+              <div>
+                <div class="page-title" style="margin-bottom:2px;">Guardias médicas</div>
+                <div class="page-sub">Planificación mensual de guardias de residentes</div>
+              </div>
             </div>
-            <div class="page-sub">Planificación mensual de guardias de residentes</div>
           </div>
           <div class="tabs" id="guardias-tabs">
             <button class="tab active" data-tab="guardias-configurar">Configurar</button>
@@ -449,12 +477,14 @@
 
         <!-- SOFTWARE -->
         <div id="page-software" class="page hidden">
-          <div class="page-header">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-              <span class="module-dot dot-software"></span>
-              <div class="page-title" style="margin-bottom:0;">Proyectos software</div>
+          <div class="page-header module-header mod-software">
+            <div class="module-head">
+              <div class="module-head-icon icon-amber"><i class="ti ti-code"></i></div>
+              <div>
+                <div class="page-title" style="margin-bottom:2px;">Proyectos software</div>
+                <div class="page-sub">Asignación heurística de tareas con scoring LLM</div>
+              </div>
             </div>
-            <div class="page-sub">Asignación heurística de tareas con scoring LLM</div>
           </div>
           <div class="tabs" id="software-tabs">
             <button class="tab active" data-tab="software-preparar">Preparar asignación</button>
@@ -617,7 +647,7 @@
                   <div class="webhook-row">
                     <span class="webhook-label">URL base n8n</span>
                     <input class="webhook-input" id="n8n-base-url" placeholder="http://localhost:5678" />
-                    <button class="btn btn-sm" onclick="testN8nConnection()"><i class="ti ti-plug"></i> Verificar</button>
+                    <button class="btn btn-sm" onclick="testN8nConnection()"><i class="ti ti-plug"></i> Conectar</button>
                   </div>
                   <div class="section-divider"></div>
                   <p class="help-text" style="margin-bottom:12px;">URLs de los webhooks de cada módulo:</p>
@@ -647,7 +677,7 @@
                     <div class="how-to-item"><div class="how-to-num">1</div><span>Arranca n8n: <code>npx n8n</code> o <code>n8n start</code></span></div>
                     <div class="how-to-item"><div class="how-to-num">2</div><span>Crea los workflows con <strong>Webhook triggers</strong></span></div>
                     <div class="how-to-item"><div class="how-to-num">3</div><span>Copia la URL base y los paths aquí</span></div>
-                    <div class="how-to-item"><div class="how-to-num">4</div><span>Pulsa "Verificar" para confirmar</span></div>
+                    <div class="how-to-item"><div class="how-to-num">4</div><span>Pulsa "Conectar" para enlazar con n8n</span></div>
                   </div>
                 </div>
               </div>

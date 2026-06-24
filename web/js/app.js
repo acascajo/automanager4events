@@ -25,8 +25,37 @@ function gotoPage(page) {
 
   document.getElementById('topbar-bc').textContent = PAGE_LABELS[page] || page;
 
+  // Animar los contadores del panel principal cada vez que se muestra
+  if (page === 'dashboard' && pageEl) animateStatValues(pageEl);
+
   // Al abrir el historial, refrescar desde Google Sheets (fuente de verdad)
   if (page === 'history' && typeof History !== 'undefined') History.load();
+}
+
+// ── Contadores ascendentes (números que suben) ───────────────────
+// Anima cada .stat-value desde 0 hasta su valor final. Solo afecta a valores
+// que empiezan por dígito (p. ej. "24", "92%", "187"); el resto ("—", textos
+// con tiempos…) se deja intacto. Respeta prefers-reduced-motion.
+function animateStatValues(scope) {
+  if (!scope) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  scope.querySelectorAll('.stat-value').forEach(el => {
+    const raw = (el.textContent || '').trim();
+    const m = raw.match(/^(\d[\d.]*)(.*)$/);   // debe empezar por dígito
+    if (!m) return;
+    const suffix = m[2];
+    const target = parseInt(m[1].replace(/\./g, ''), 10);
+    if (!isFinite(target) || target <= 0 || target > 100000) return;
+    const dur = 650, t0 = performance.now();
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);    // easeOutCubic
+      el.textContent = Math.round(target * eased) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = target + suffix;
+    };
+    requestAnimationFrame(tick);
+  });
 }
 
 // ── Login / Registro / Logout (autenticación real: credencial con hash) ──
@@ -616,7 +645,10 @@ function showResults(base) {
     guardias: ['guardias-tabs', 'guardias-calendario'],
   };
   const target = map[base];
-  if (target) activateTab(target[0], target[1]);
+  if (target) {
+    activateTab(target[0], target[1]);
+    animateStatValues(document.getElementById(target[1]));
+  }
 }
 
 async function runWorkflow(module) {
